@@ -1,12 +1,12 @@
 # Brutus Pepper
 
-Application tablette et antenne serveur open source pour Pepper.
+Application Android et serveur open source pour le robot Pepper.
 
-Le projet donne une base simple pour faire parler Pepper, afficher des médias,
-préparer un accueil et piloter le robot avec une manette. L’antenne garde les
-clés des fournisseurs et la tablette ne reçoit qu’un jeton d’appairage.
+Brutus Pepper relie la tablette du robot Pepper à une antenne Docker. La tablette
+affiche la conversation et les médias ; le serveur gère l’audio, les fournisseurs,
+les recherches web et les réglages. Les clés restent sur l’antenne.
 
-## Le projet en un coup d’œil
+## Organisation
 
 ```text
 Pepper (Android)  <->  réseau local  <->  antenne Docker  <->  fournisseurs choisis
