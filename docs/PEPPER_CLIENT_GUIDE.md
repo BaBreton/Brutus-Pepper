@@ -1,6 +1,6 @@
-# Pepper · guide de mise en route
+# Pepper · installer l’antenne
 
-> Un guide court pour installer l’antenne, connecter Pepper et personnaliser son accueil.
+> Installer le serveur et relier l’application déjà présente sur le robot Pepper.
 
 ## Le principe
 
@@ -9,21 +9,40 @@ Pepper (tablette)  ⇄  réseau local  ⇄  antenne Docker  ⇄  API choisies
        voix, écran                         audio, web, LLM, images
 ```
 
-L’antenne est le serveur installé sur votre ordinateur. Elle conserve les clés API, les réglages et les médias en cache. Les clés API ne sont jamais installées sur la tablette.
+L’antenne est le serveur installé sur votre ordinateur. Elle conserve les clés API, les réglages et les médias en cache. L’application du robot Pepper est déjà installée sur sa tablette : les clés API ne sont jamais installées sur Pepper.
 
-## 1 · Installer l’antenne
+## 1 · Décompresser et installer le serveur
 
-1. Installer et démarrer Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux. L’ordinateur doit rester allumé pendant les visites.
-2. Décompresser `pepper-client-*.zip` dans un dossier dédié.
-3. Dans le dossier `install`, double-cliquer sur `Pepper.command` (Mac) ou `Pepper.cmd` (Windows). Sur Linux, lancer `bash install/pepper.sh setup` depuis le dossier extrait.
-4. Choisir le réseau local proposé. Si plusieurs réseaux sont affichés, sélectionner celui auquel Pepper sera connecté.
-5. Noter l’adresse affichée par l’installateur et ouvrir l’administration dans le navigateur.
+L’application est déjà dans Pepper. Cette procédure concerne uniquement l’antenne, c’est-à-dire le serveur qui tourne sur l’ordinateur du client.
+
+1. Télécharger le fichier `Pepper-server.zip` et le placer dans **Téléchargements** ou dans un autre dossier facile à retrouver.
+2. Décompresser le ZIP en entier : clic droit sur le fichier → **Extraire tout…** sous Windows, ou double-clic sur Mac. Choisir un dossier dédié, par exemple `Pepper` dans **Documents**. Ne pas travailler depuis l’aperçu du ZIP.
+3. Vérifier que le dossier extrait contient au même niveau `install`, `server` et `docs`. Si `install` est caché à l’intérieur d’un second dossier, ouvrir ce second dossier pour la suite.
+4. Installer puis démarrer **Docker Desktop** sur Mac ou Windows, ou **Docker Engine + Compose** sur Linux. L’ordinateur doit rester allumé et connecté au même réseau que Pepper pendant les visites.
+5. Lancer l’installation :
+   - **Mac** : ouvrir `install`, puis double-cliquer sur `Pepper.command`. Si macOS bloque le fichier, faire Ctrl-clic → **Ouvrir**.
+   - **Windows** : ouvrir `install`, puis double-cliquer sur `Pepper.cmd` (pas sur le fichier `.ps1`).
+   - **Linux** : ouvrir un terminal dans le dossier extrait et lancer `bash install/pepper.sh setup`.
+6. Suivre les questions du lanceur. Il construit l’antenne localement, démarre Docker et attend que l’administration réponde. Le premier lancement peut prendre plusieurs minutes et nécessite Internet pour télécharger les composants.
+7. Quand le lanceur indique que Pepper est prêt, ouvrir l’adresse d’administration sur cet ordinateur : `http://localhost:8770/`. Noter aussi l’adresse LAN affichée : c’est celle que la tablette Pepper utilisera.
 
 Les données et les réglages restent dans les volumes Docker. Pour une mise à jour, suivre la procédure de sauvegarde et de relance dans `install/README.md` ; ne pas supprimer les volumes.
 
-Dans le ZIP complet avec application, l’APK se trouve dans `application/Pepper.apk`, à partir du dossier extrait. Son installation sur la tablette est une étape distincte : suivre `install/INSTALLER_APPLICATION.md` avec votre installateur. Le ZIP serveur seul ne contient pas l’APK.
+Le paquet serveur n’a pas besoin d’APK. Si un paquet complet contient `application/Pepper.apk`, cette copie est seulement un secours pour l’installateur : ne pas la réinstaller si l’application est déjà présente sur Pepper.
 
 ## 2 · Première configuration
+
+### Les accès et les clés
+
+Il ne faut pas confondre les accès internes de l’antenne avec les clés des services en ligne :
+
+| Élément | Où il est conservé | Utilisation |
+|---|---|---|
+| **Jeton administrateur** | Serveur, dans ses données Docker | Ouvrir l’interface d’administration et modifier les réglages. Ne jamais le saisir dans Pepper. |
+| **Jeton d’appairage** | Serveur et application Pepper | Autoriser la tablette à appeler l’antenne. Ce n’est pas un accès à l’administration. |
+| **Clés API fournisseurs** | Serveur uniquement | LLM, transcription, recherche web et images. Elles ne sont jamais intégrées à l’application Pepper. |
+
+Au premier lancement, `setup` propose d’afficher le jeton administrateur dans le terminal local. L’accepter uniquement devant l’ordinateur du client, puis le copier dans la page `http://localhost:8770/`. Le serveur crée et conserve ce jeton ; une simple relance ne le change pas. Si le jeton est perdu, relancer `setup` localement pour le réafficher.
 
 Dans **Voix et intelligence**, régler les connecteurs. Les champs sont enregistrés côté antenne et les clés sont masquées après sauvegarde.
 
@@ -114,7 +133,12 @@ La manette permet de se déplacer et de déclencher les actions configurées. Le
 
 ## 5 · Connexion de Pepper
 
-Dans l’administration, ouvrir **Connecter Pepper**. Sur la tablette, ouvrir **Cerveau**, saisir l’adresse de l’antenne et le jeton d’appairage affiché. Ne pas utiliser le jeton administrateur ni l’adresse `localhost` sur la tablette. Tester ensuite : réveil vocal, écoute, réponse, retour en attente après un silence, menu repliable, affichage d’une image et déplacement à la manette.
+1. Sur l’ordinateur, ouvrir l’administration avec le **jeton administrateur**.
+2. Ouvrir **Connecter Pepper** et afficher le **jeton d’appairage**. C’est le seul jeton à saisir sur la tablette.
+3. Sur Pepper, ouvrir l’application déjà installée, puis **Cerveau**. Saisir l’adresse LAN de l’antenne, par exemple `http://<adresse-de-l-antenne>:8770`, et le jeton d’appairage.
+4. Enregistrer, puis tester le réveil vocal, l’écoute, une réponse, le retour en attente après un silence, le menu repliable, une image et la manette.
+
+Ne jamais utiliser le jeton administrateur sur Pepper et ne jamais saisir `localhost` sur la tablette : `localhost` désigne la tablette elle-même. Si le jeton d’appairage est régénéré dans l’administration, il faut le recopier dans Pepper.
 
 Pour vérifier la fin de conversation :
 

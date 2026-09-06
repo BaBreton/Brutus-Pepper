@@ -1,8 +1,9 @@
 # Installer Pepper chez vous
 
-Ce dossier installe le « cerveau » de Pepper sur votre ordinateur. Il doit rester
-allumé et connecté au même réseau que le robot. L'installation de l'application
-sur la tablette est une opération distincte, à réaliser avec votre installateur.
+Ce dossier installe l'antenne, c'est-à-dire le « cerveau » de Pepper, sur votre
+ordinateur. L'application du robot Pepper est déjà installée sur sa tablette :
+ce parcours concerne uniquement le serveur. L'ordinateur doit rester allumé et
+connecté au même réseau que le robot.
 
 Pour une version plus visuelle de ce parcours, ouvrir `docs/PEPPER_CLIENT_GUIDE.html`
 depuis le ZIP ; elle fonctionne hors ligne et peut être imprimée.
@@ -71,6 +72,13 @@ transcription de session. Copiez le jeton dans le champ de connexion de
 si vous avez fini. Le navigateur peut être ouvert à votre demande. Son URL ne
 contient jamais le jeton. Fermez ensuite le terminal pour limiter son exposition
 dans le défilement, et déconnectez-vous de la webapp quand vous avez terminé.
+
+Il existe deux jetons internes différents. Le jeton administrateur sert uniquement
+à ouvrir cette interface et ne doit jamais être saisi dans Pepper. Le jeton
+d'appairage, affiché ensuite dans **Connecter Pepper**, sert uniquement à autoriser
+l'application Pepper à appeler l'antenne. La tablette conserve le jeton d'appairage ;
+les clés API des fournisseurs restent sur le serveur. Ce ne sont pas les mêmes
+informations.
 
 Le lanceur n'enregistre aucun jeton et refuse cet affichage lorsque ses sorties
 sont redirigées ou dans les sessions distantes détectées. Un outil tiers qui filme
@@ -193,8 +201,8 @@ Cette option ajoute `application/Pepper.apk`, `docs/PEPPER_CLIENT_GUIDE.pdf` et
 `install/INSTALLER_APPLICATION.md`. L’APK provient de
 `app/build/outputs/apk/debug/app-debug.apk`. Le script ne compile pas l’application
 et ne génère pas le PDF : ces fichiers doivent être prêts avant son lancement.
-Il les inclut dans le ZIP ; l’installation sur Pepper reste une étape distincte,
-décrite dans `install/INSTALLER_APPLICATION.md`.
+Il les inclut dans le ZIP. Si l’application est déjà installée sur Pepper, ne
+réinstallez pas cet APK ; il s'agit seulement d'une copie de secours.
 
 Le script refuse d'écraser un fichier. Il prend le contenu actuel des sources dans
 `server/brain`, fichiers nouveaux non ignorés inclus, filtré par type source et par

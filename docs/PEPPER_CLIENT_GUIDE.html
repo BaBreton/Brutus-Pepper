@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pepper · guide de mise en route</title>
+  <title>Pepper · installer l’antenne</title>
   <style>
     :root { --paper:#f8f9f7; --ink:#182b2b; --muted:#607170; --teal:#087f8c; --teal-dark:#07545d; --mint:#d9f1ed; --sun:#f4be62; --line:#dce6e2; --card:#fff; --shadow:0 18px 50px rgba(24,43,43,.10); }
     * { box-sizing:border-box; }
@@ -74,8 +74,8 @@
       <div class="hero-grid">
         <div>
           <p class="eyebrow" style="color:#f4be62">Installation et utilisation</p>
-          <h1>Mettre Pepper en service.</h1>
-          <p class="lead">Ce guide explique comment installer l’antenne, connecter la tablette et régler les services sans avoir besoin de modifier le code.</p>
+          <h1>Installer l’antenne Pepper.</h1>
+          <p class="lead">L’application est déjà installée sur le robot Pepper. Ce guide explique comment décompresser et installer le serveur, puis le connecter à la tablette.</p>
           <div class="tag-row"><span class="tag">Conversation</span><span class="tag">Images et vidéos</span><span class="tag">Fiches de visite</span><span class="tag">Manette</span></div>
         </div>
         <div class="orb-wrap" aria-label="Illustration de l'orbe vocal"><div class="orb"><span class="orb-label">à l’écoute</span></div></div>
@@ -86,7 +86,7 @@
   <main>
     <section class="section" id="demarrage">
       <p class="eyebrow">01 · démarrage</p><h2>Le système en un coup d’œil</h2>
-      <p class="section-intro">L’antenne est le serveur installé sur votre ordinateur. Elle conserve les clés API, les réglages et les médias en cache. Les clés API ne sont jamais installées sur la tablette.</p>
+      <p class="section-intro">L’antenne est le serveur installé sur votre ordinateur. Elle conserve les clés API, les réglages et les médias en cache. L’application du robot Pepper est déjà installée sur sa tablette ; les clés API ne sont jamais installées sur Pepper.</p>
       <div class="flow" aria-label="Flux entre Pepper et les services"><div class="flow-node"><span class="icon">🤖</span><strong>Pepper</strong><br><span class="mini">écoute · écran · gestes</span></div><div class="flow-arrow">↔</div><div class="flow-node"><span class="icon">🖥️</span><strong>Antenne Docker</strong><br><span class="mini">audio · mémoire · sécurité</span></div><div class="flow-arrow">↔</div><div class="flow-node"><span class="icon">☁️</span><strong>Services choisis</strong><br><span class="mini">LLM · transcription · web</span></div></div>
       <div class="grid-3">
         <article class="card soft"><div class="number">1</div><h3>Installer</h3><p>Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux, puis le lanceur fourni.</p></article>
@@ -96,18 +96,19 @@
     </section>
 
     <section class="section">
-      <p class="eyebrow">02 · installation</p><h2>Mettre l’antenne en service</h2>
+      <p class="eyebrow">02 · installation</p><h2>Décompresser et installer le serveur</h2>
       <div class="grid-2">
-        <article class="card"><h3>Sur votre ordinateur</h3><ol class="step-list"><li>Installer et démarrer Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux.</li><li>Décompresser tout le ZIP dans un dossier dédié.</li><li>Dans <code>install</code>, double-cliquer sur <code>Pepper.command</code> sur Mac, ou sur <code>Pepper.cmd</code> sur Windows. Sous Linux, lancer <code>bash install/pepper.sh setup</code> depuis le dossier extrait.</li><li>Choisir, si nécessaire, l’adresse Wi-Fi/Ethernet utilisée par Pepper.</li></ol></article>
-        <article class="card"><h3>Après le premier lancement</h3><ul class="check"><li>Ouvrir l’administration à l’adresse affichée.</li><li>Utiliser le jeton administrateur proposé localement.</li><li>Garder l’ordinateur allumé et sur le même réseau que Pepper.</li><li>Ne jamais publier le port 8770 sur Internet.</li></ul><div class="callout"><strong>Important :</strong> ne jamais utiliser <code>docker compose down -v</code>. Cette commande supprime les données persistantes.</div></article>
+        <article class="card"><h3>Sur votre ordinateur</h3><ol class="step-list"><li>Télécharger <code>Pepper-server.zip</code> et le placer dans Téléchargements ou Documents.</li><li>Décompresser tout le ZIP dans un dossier dédié. Vérifier que <code>install</code>, <code>server</code> et <code>docs</code> sont au même niveau.</li><li>Installer et démarrer Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux.</li><li>Dans <code>install</code>, lancer <strong>Mac</strong> : <code>Pepper.command</code>, <strong>Windows</strong> : <code>Pepper.cmd</code>, ou <strong>Linux</strong> : <code>bash install/pepper.sh setup</code>.</li><li>Suivre les questions du lanceur et attendre le message indiquant que Pepper est prêt. Le premier lancement peut prendre plusieurs minutes.</li></ol></article>
+        <article class="card"><h3>Après le premier lancement</h3><ul class="check"><li>Ouvrir <code>http://localhost:8770/</code> sur l’ordinateur serveur.</li><li>Copier le jeton administrateur proposé uniquement dans ce terminal local.</li><li>Noter l’adresse LAN affichée pour la tablette Pepper.</li><li>Garder l’ordinateur allumé et sur le même réseau que Pepper.</li><li>Ne jamais publier le port 8770 sur Internet.</li></ul><div class="callout"><strong>Important :</strong> ne jamais utiliser <code>docker compose down -v</code>. Cette commande supprime les données persistantes.</div></article>
       </div>
     </section>
 
-    <p class="callout">Dans le ZIP complet avec application, l’APK se trouve dans <code>application/Pepper.apk</code>, à partir du dossier extrait. Son installation sur la tablette est une étape distincte : suivre <code>install/INSTALLER_APPLICATION.md</code> avec votre installateur. Le ZIP serveur seul ne contient pas l’APK.</p>
+    <p class="callout">Le paquet serveur n’a pas besoin d’APK. Si un paquet complet contient <code>application/Pepper.apk</code>, cette copie est seulement un secours pour l’installateur : ne pas la réinstaller si l’application est déjà présente sur Pepper.</p>
 
     <section class="section" id="api">
       <p class="eyebrow">03 · api et connecteurs</p><h2>Tout régler depuis l’interface serveur</h2>
       <p class="section-intro">Ouvrir <strong>Voix et intelligence</strong>, choisir un fournisseur, coller la clé, sélectionner le modèle, puis cliquer sur <strong>Enregistrer</strong>. Les clés sont masquées ensuite et restent sur l’antenne.</p>
+      <div class="card"><h3>Les accès à ne pas mélanger</h3><table><thead><tr><th>Élément</th><th>Où il reste</th><th>Utilisation</th></tr></thead><tbody><tr><td><strong>Jeton administrateur</strong></td><td>Données Docker du serveur</td><td>Ouvrir l’administration et modifier les réglages. Jamais dans Pepper.</td></tr><tr><td><strong>Jeton d’appairage</strong></td><td>Serveur et application Pepper</td><td>Autoriser la tablette à appeler l’antenne. Pas d’accès à l’administration.</td></tr><tr><td><strong>Clés API fournisseurs</strong></td><td>Serveur uniquement</td><td>LLM, transcription, recherche web et images. Jamais dans l’application Pepper.</td></tr></tbody></table></div>
       <div class="card">
         <div class="provider"><div><h3>Google Images via Serper</h3><span class="badge">web et images</span><p>Pour les images, les recherches Internet et les sources des fiches de visite. Configurer aussi la langue (<code>fr</code>) et le pays (<code>fr</code>, <code>be</code> ou <code>ch</code>).</p><p class="mini"><a href="https://serper.dev/">Créer une clé Serper</a>. Consulter son compte pour les crédits et les tarifs. Le bouton <strong>Tester les réglages enregistrés</strong> vérifie la recherche et l’affichage d’une image sans afficher la clé.</p></div><div class="price">selon l’offre</div></div>
         <div class="provider"><div><h3>Modèle de conversation (LLM)</h3><p>Choisir le fournisseur, saisir sa clé et sélectionner un modèle dans la liste. Ce modèle prépare les réponses de Pepper et les brouillons de visite.</p></div><div class="price">selon modèle</div></div>
@@ -143,7 +144,7 @@
 
     <section class="section">
       <p class="eyebrow">06 · connexion</p><h2>Appairer Pepper et vérifier le parcours</h2>
-      <div class="card"><ol class="step-list"><li>Dans l’administration, ouvrir <strong>Connecter Pepper</strong> et afficher le jeton d’appairage.</li><li>Sur la tablette, ouvrir <strong>Cerveau</strong>, saisir l’adresse réseau de l’antenne et ce jeton. Ne pas utiliser le jeton administrateur ni l’adresse <code>localhost</code> sur Pepper.</li><li>Tester dans cet ordre : réveil vocal, écoute, transcription, réponse, retour en attente après un silence, menu repliable, affichage d’une image, geste et déplacement à la manette.</li></ol></div>
+      <div class="card"><ol class="step-list"><li>Sur l’ordinateur, ouvrir l’administration avec le <strong>jeton administrateur</strong>.</li><li>Ouvrir <strong>Connecter Pepper</strong> et afficher le <strong>jeton d’appairage</strong>. C’est le seul jeton à saisir sur la tablette.</li><li>Sur Pepper, ouvrir l’application déjà installée, puis <strong>Cerveau</strong>. Saisir l’adresse LAN de l’antenne et le jeton d’appairage. Ne pas utiliser <code>localhost</code>.</li><li>Tester dans cet ordre : réveil vocal, écoute, transcription, réponse, retour en attente après un silence, menu repliable, affichage d’une image, geste et déplacement à la manette.</li></ol></div>
     <div class="card"><h3>Vérifier la fin de conversation</h3><ol class="step-list"><li>Dire « Merci » pendant un échange : Pepper répond et écoute la suite.</li><li>Dire « Merci Pepper, à bientôt » : attendre sa réponse complète, puis vérifier le retour en attente de « Pepper ».</li><li>Parler entre visiteurs sans prononcer « Pepper » : la conversation ne doit pas repartir. Vérifier aussi que la détection d’une personne et la coupure puis réactivation du micro ne relancent pas l’accueil automatique.</li><li>Dire « Pepper » pour reprendre, puis refaire la clôture et vérifier la reprise avec <strong>Parler</strong>.</li></ol></div>
     </section>
 
@@ -152,6 +153,6 @@
       <div class="card"><table><thead><tr><th>Symptôme</th><th>À vérifier</th></tr></thead><tbody><tr><td>Pepper ne répond pas</td><td>Docker est ouvert, l’antenne répond et les deux appareils sont sur le même réseau.</td></tr><tr><td>Pas de transcription</td><td>Whisper est téléchargé ou la clé STT choisie est configurée.</td></tr><tr><td>Pas d’image</td><td>Serper est sélectionné et crédité ; essayer une requête plus précise.</td></tr><tr><td>Accueil vide</td><td>La fiche de visite est validée et le fournisseur web est configuré.</td></tr><tr><td>Clé refusée</td><td>La remplacer dans l’interface ; ne jamais la mettre dans l’APK ou dans l’URL.</td></tr></tbody></table></div>
     </section>
   </main>
-  <footer>Guide Pepper · conserver ce document avec le ZIP client · les tarifs et disponibilités des fournisseurs peuvent évoluer.</footer>
+  <footer>Guide Pepper · conserver ce document avec le ZIP serveur · les tarifs et disponibilités des fournisseurs peuvent évoluer.</footer>
 </body>
 </html>
