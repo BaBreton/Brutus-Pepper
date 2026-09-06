@@ -1,0 +1,23 @@
+services:
+  brain:
+    image: pepper-brain:latest
+    build: .
+    container_name: pepper-brain
+    restart: unless-stopped
+    ports:
+      - "8770:8770"
+    volumes:
+      - brain-data:/data      # réglages chiffrés, jetons, médiathèque
+      - brain-models:/models  # modèles Whisper, téléchargés au premier démarrage
+    environment:
+      BRAIN_LANGUAGE: fr
+      # Mettre à "0" pour démarrer sans toucher au réseau : la transcription
+      # échouera tant qu'aucun modèle n'est présent dans le volume.
+      BRAIN_PRELOAD_STT: "1"
+      # Contact facultatif pour les fournisseurs d'images qui le demandent —
+      # courriel ou site — afin de limiter les refus de requêtes.
+      BRAIN_IMAGE_CONTACT: "${BRAIN_IMAGE_CONTACT:-}"
+
+volumes:
+  brain-data:
+  brain-models:

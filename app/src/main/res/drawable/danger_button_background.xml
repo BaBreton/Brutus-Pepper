@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arrêt d'urgence. Rouge plein quand il sert, très pâle quand il ne sert pas :
+     l'écran d'accueil d'un hall ne doit pas être dominé par un bouton rouge inactif. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape>
+            <corners android:radius="16dp" />
+            <solid android:color="@color/danger_soft" />
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <corners android:radius="16dp" />
+            <solid android:color="@color/danger" />
+        </shape>
+    </item>
+</selector>

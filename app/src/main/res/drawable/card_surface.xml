@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carte blanche posée sur le fond : c'est le conteneur de base de chaque panneau. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="22dp" />
+    <solid android:color="@color/surface" />
+    <stroke android:width="1dp" android:color="@color/line" />
+</shape>

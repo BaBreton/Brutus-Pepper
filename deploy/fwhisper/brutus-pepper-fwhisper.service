@@ -1,0 +1,14 @@
+[Unit]
+Description=Brutus Pepper faster-whisper STT server (port 8766)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/pepper/services/fwhisper/venv/bin/python /opt/pepper/services/fwhisper/fwhisper_server.py
+Restart=on-failure
+RestartSec=3
+WorkingDirectory=/opt/pepper/services/fwhisper
+
+[Install]
+WantedBy=default.target

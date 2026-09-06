@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Charte de la tablette. Mêmes valeurs que la webapp du cerveau (server/brain/static/
+  index.html) : les deux surfaces sont le même produit, un installateur passe de l'une
+  à l'autre en quelques minutes et ne doit pas avoir l'impression de changer d'outil.
+
+  Blanc et bleu. Une seule couleur de marque, déclinée ; le reste est du blanc, du
+  gris-bleu et de l'espace. La couleur ne porte jamais seule une information : chaque
+  état est aussi écrit en toutes lettres, parce que l'écran est lu de loin et en biais.
+-->
+<resources>
+    <!-- Texte -->
+    <color name="ink">#182B2B</color>
+    <color name="ink_2">#52696B</color>
+    <color name="ink_3">#607476</color>
+    <color name="on_accent">#FFFFFF</color>
+
+    <!-- Marque -->
+    <color name="blue">#087F8C</color>
+    <color name="blue_dark">#07636D</color>
+    <color name="blue_soft">#E4F3F1</color>
+    <color name="blue_line">#B6DAD7</color>
+
+    <!-- Surfaces -->
+    <color name="canvas">#F8F9F7</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="line">#E2E8E4</color>
+
+    <!-- Rail de navigation : le seul aplat sombre, pour ancrer l'écran et distinguer
+         d'un coup d'œil la barre des pages. -->
+    <color name="rail">#EEF2EE</color>
+    <color name="rail_label">#52696B</color>
+
+    <!-- États. Ils doublent un mot, ils ne le remplacent jamais. -->
+    <color name="ok">#0B7F57</color>
+    <color name="danger">#C62828</color>
+    <color name="danger_soft">#FDECEB</color>
+
+    <!-- Fond de l'affichage plein écran. Volontairement très sombre : une photo
+         projetée devant un visiteur ressort mieux sur du presque-noir. -->
+    <color name="stage">#050F26</color>
+    <color name="stage_text">#FFFFFF</color>
+    <color name="stage_muted">#A9BFE4</color>
+</resources>

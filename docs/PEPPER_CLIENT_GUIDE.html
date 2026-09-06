@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pepper · guide de mise en route</title>
+  <style>
+    :root { --paper:#f8f9f7; --ink:#182b2b; --muted:#607170; --teal:#087f8c; --teal-dark:#07545d; --mint:#d9f1ed; --sun:#f4be62; --line:#dce6e2; --card:#fff; --shadow:0 18px 50px rgba(24,43,43,.10); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color:var(--teal-dark); font-weight:700; }
+    .hero { overflow:hidden; color:#fff; background:radial-gradient(circle at 84% 12%, rgba(244,190,98,.35), transparent 23rem), linear-gradient(135deg,#123d42 0%,#07545d 53%,#087f8c 100%); }
+    .hero-inner, main, footer { max-width:1120px; margin:auto; padding-left:24px; padding-right:24px; }
+    .hero-inner { padding-top:30px; padding-bottom:58px; }
+    nav { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:58px; font-size:.92rem; }
+    nav strong { letter-spacing:.08em; text-transform:uppercase; }
+    nav a { color:#d9f1ed; text-decoration:none; }
+    .hero-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(250px,.75fr); align-items:center; gap:60px; }
+    h1,h2,h3 { line-height:1.15; letter-spacing:-.03em; }
+    h1 { max-width:700px; margin:0 0 20px; font-size:clamp(2.6rem,7vw,5.5rem); }
+    h2 { margin:0 0 14px; font-size:clamp(1.7rem,3vw,2.5rem); }
+    h3 { margin:0 0 8px; font-size:1.15rem; }
+    .lead { max-width:680px; margin:0; color:#d9f1ed; font-size:1.18rem; }
+    .tag-row { display:flex; flex-wrap:wrap; gap:9px; margin-top:28px; }
+    .tag { display:inline-flex; align-items:center; min-height:30px; padding:3px 12px; border:1px solid rgba(255,255,255,.28); border-radius:99px; color:#fff; background:rgba(255,255,255,.09); font-size:.83rem; }
+    .orb-wrap { display:grid; place-items:center; min-height:280px; }
+    .orb { position:relative; display:grid; place-items:center; width:190px; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 36% 30%,#fff 0 3%,#b7fbf0 14%,#28c4c0 41%,#087f8c 67%,#07545d 100%); box-shadow:0 0 0 18px rgba(217,241,237,.10),0 0 0 42px rgba(217,241,237,.06),0 24px 70px rgba(0,0,0,.28); animation:breathe 3.2s ease-in-out infinite; }
+    .orb::before,.orb::after { content:""; position:absolute; border:1px solid rgba(217,241,237,.45); border-radius:50%; inset:-24px; animation:ring 3.2s ease-in-out infinite; }
+    .orb::after { inset:-49px; opacity:.45; animation-delay:.35s; }
+    .orb-label { position:relative; z-index:1; color:#fff; font-size:.86rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; text-shadow:0 1px 6px rgba(0,0,0,.25); }
+    @keyframes breathe { 0%,100% { transform:scale(.94); } 50% { transform:scale(1.08); } }
+    @keyframes ring { 0%,100% { transform:scale(.92); opacity:.25; } 50% { transform:scale(1.08); opacity:.85; } }
+    main { padding-top:42px; padding-bottom:60px; }
+    .section { margin-top:58px; scroll-margin-top:20px; }
+    .section-intro { max-width:720px; margin:0 0 22px; color:var(--muted); }
+    .eyebrow { margin:0 0 8px; color:var(--teal); font-size:.77rem; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+    .card { padding:24px; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:var(--shadow); }
+    .card.soft { background:linear-gradient(145deg,#fff,#edf8f5); }
+    .number { display:grid; place-items:center; width:36px; height:36px; margin-bottom:18px; border-radius:12px; color:#fff; background:var(--teal); font-weight:900; }
+    .card p:last-child { margin-bottom:0; }
+    .flow { display:flex; align-items:stretch; justify-content:center; gap:0; margin:26px 0; }
+    .flow-node { flex:1; max-width:245px; padding:20px 16px; border:1px solid var(--line); background:#fff; text-align:center; }
+    .flow-node:first-child { border-radius:18px 0 0 18px; }
+    .flow-node:last-child { border-radius:0 18px 18px 0; }
+    .flow-arrow { display:grid; place-items:center; min-width:34px; color:var(--teal); background:var(--mint); font-size:1.4rem; font-weight:900; }
+    .icon { display:block; margin-bottom:9px; font-size:1.6rem; }
+    .step-list { display:grid; gap:12px; margin:0; padding:0; list-style:none; counter-reset:step; }
+    .step-list li { display:block; position:relative; min-height:30px; padding-left:46px; counter-increment:step; }
+    .step-list li::before { content:counter(step); position:absolute; top:0; left:0; display:grid; place-items:center; width:30px; height:30px; border-radius:50%; color:#fff; background:var(--teal); font-weight:900; }
+    .mini { color:var(--muted); font-size:.92rem; }
+    .provider { display:grid; grid-template-columns:1fr auto; gap:18px; align-items:start; padding:18px 0; border-bottom:1px solid var(--line); }
+    .provider:last-child { border-bottom:0; padding-bottom:0; }
+    .badge { display:inline-flex; padding:4px 10px; border-radius:99px; color:var(--teal-dark); background:var(--mint); font-size:.78rem; font-weight:900; white-space:nowrap; }
+    .price { color:var(--teal-dark); font-size:.9rem; font-weight:800; text-align:right; }
+    code { padding:.12em .38em; border-radius:6px; color:#07545d; background:#e8f2ef; font-size:.92em; }
+    .callout { margin-top:18px; padding:18px 20px; border-left:4px solid var(--sun); border-radius:0 14px 14px 0; background:#fff8ea; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--teal-dark); font-size:.84rem; text-transform:uppercase; letter-spacing:.05em; }
+    .check { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+    .check li::before { content:"✓"; display:inline-grid; place-items:center; width:22px; height:22px; margin-right:9px; border-radius:50%; color:#fff; background:var(--teal); font-size:.8rem; font-weight:900; }
+    footer { padding-top:26px; padding-bottom:46px; border-top:1px solid var(--line); color:var(--muted); font-size:.88rem; }
+    @media (max-width:760px) { .hero-grid,.grid-2,.grid-3 { grid-template-columns:1fr; } .hero-inner { padding-bottom:42px; } nav { margin-bottom:38px; } nav a { display:none; } .orb-wrap { min-height:230px; } .orb { width:150px; } .flow { align-items:stretch; flex-direction:column; } .flow-node,.flow-node:first-child,.flow-node:last-child { max-width:none; border-radius:0; } .flow-node:first-child { border-radius:18px 18px 0 0; } .flow-node:last-child { border-radius:0 0 18px 18px; } .flow-arrow { min-height:30px; } .provider { grid-template-columns:1fr; } .price { text-align:left; } }
+    @media print { body { background:#fff; } .hero { color:#000; background:#fff; } .hero-inner { padding-top:10px; padding-bottom:20px; } nav a,.orb-wrap { display:none; } .lead { color:#333; } .card { box-shadow:none; break-inside:avoid; } .section { margin-top:30px; } a { color:#000; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <nav><strong>Pepper / guide client</strong><a href="#demarrage">Commencer ↓</a></nav>
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow" style="color:#f4be62">Installation et utilisation</p>
+          <h1>Mettre Pepper en service.</h1>
+          <p class="lead">Ce guide explique comment installer l’antenne, connecter la tablette et régler les services sans avoir besoin de modifier le code.</p>
+          <div class="tag-row"><span class="tag">Conversation</span><span class="tag">Images et vidéos</span><span class="tag">Fiches de visite</span><span class="tag">Manette</span></div>
+        </div>
+        <div class="orb-wrap" aria-label="Illustration de l'orbe vocal"><div class="orb"><span class="orb-label">à l’écoute</span></div></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" id="demarrage">
+      <p class="eyebrow">01 · démarrage</p><h2>Le système en un coup d’œil</h2>
+      <p class="section-intro">L’antenne est le serveur installé sur votre ordinateur. Elle conserve les clés API, les réglages et les médias en cache. Les clés API ne sont jamais installées sur la tablette.</p>
+      <div class="flow" aria-label="Flux entre Pepper et les services"><div class="flow-node"><span class="icon">🤖</span><strong>Pepper</strong><br><span class="mini">écoute · écran · gestes</span></div><div class="flow-arrow">↔</div><div class="flow-node"><span class="icon">🖥️</span><strong>Antenne Docker</strong><br><span class="mini">audio · mémoire · sécurité</span></div><div class="flow-arrow">↔</div><div class="flow-node"><span class="icon">☁️</span><strong>Services choisis</strong><br><span class="mini">LLM · transcription · web</span></div></div>
+      <div class="grid-3">
+        <article class="card soft"><div class="number">1</div><h3>Installer</h3><p>Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux, puis le lanceur fourni.</p></article>
+        <article class="card soft"><div class="number">2</div><h3>Configurer</h3><p>Une interface web simple pour les clés, les modèles, les images et l’accueil.</p></article>
+        <article class="card soft"><div class="number">3</div><h3>Connecter</h3><p>Adresse de l’antenne et jeton d’appairage sur la tablette Pepper.</p></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="eyebrow">02 · installation</p><h2>Mettre l’antenne en service</h2>
+      <div class="grid-2">
+        <article class="card"><h3>Sur votre ordinateur</h3><ol class="step-list"><li>Installer et démarrer Docker Desktop sur Mac ou Windows, ou Docker Engine avec Compose sur Linux.</li><li>Décompresser tout le ZIP dans un dossier dédié.</li><li>Dans <code>install</code>, double-cliquer sur <code>Pepper.command</code> sur Mac, ou sur <code>Pepper.cmd</code> sur Windows. Sous Linux, lancer <code>bash install/pepper.sh setup</code> depuis le dossier extrait.</li><li>Choisir, si nécessaire, l’adresse Wi-Fi/Ethernet utilisée par Pepper.</li></ol></article>
+        <article class="card"><h3>Après le premier lancement</h3><ul class="check"><li>Ouvrir l’administration à l’adresse affichée.</li><li>Utiliser le jeton administrateur proposé localement.</li><li>Garder l’ordinateur allumé et sur le même réseau que Pepper.</li><li>Ne jamais publier le port 8770 sur Internet.</li></ul><div class="callout"><strong>Important :</strong> ne jamais utiliser <code>docker compose down -v</code>. Cette commande supprime les données persistantes.</div></article>
+      </div>
+    </section>
+
+    <p class="callout">Dans le ZIP complet avec application, l’APK se trouve dans <code>application/Pepper.apk</code>, à partir du dossier extrait. Son installation sur la tablette est une étape distincte : suivre <code>install/INSTALLER_APPLICATION.md</code> avec votre installateur. Le ZIP serveur seul ne contient pas l’APK.</p>
+
+    <section class="section" id="api">
+      <p class="eyebrow">03 · api et connecteurs</p><h2>Tout régler depuis l’interface serveur</h2>
+      <p class="section-intro">Ouvrir <strong>Voix et intelligence</strong>, choisir un fournisseur, coller la clé, sélectionner le modèle, puis cliquer sur <strong>Enregistrer</strong>. Les clés sont masquées ensuite et restent sur l’antenne.</p>
+      <div class="card">
+        <div class="provider"><div><h3>Google Images via Serper</h3><span class="badge">web et images</span><p>Pour les images, les recherches Internet et les sources des fiches de visite. Configurer aussi la langue (<code>fr</code>) et le pays (<code>fr</code>, <code>be</code> ou <code>ch</code>).</p><p class="mini"><a href="https://serper.dev/">Créer une clé Serper</a>. Consulter son compte pour les crédits et les tarifs. Le bouton <strong>Tester les réglages enregistrés</strong> vérifie la recherche et l’affichage d’une image sans afficher la clé.</p></div><div class="price">selon l’offre</div></div>
+        <div class="provider"><div><h3>Modèle de conversation (LLM)</h3><p>Choisir le fournisseur, saisir sa clé et sélectionner un modèle dans la liste. Ce modèle prépare les réponses de Pepper et les brouillons de visite.</p></div><div class="price">selon modèle</div></div>
+        <div class="provider"><div><h3>Transcription</h3><p><strong>Whisper local</strong> garde l’audio sur votre réseau. Le texte peut ensuite être envoyé au service de conversation choisi. Pour le texte en continu avec OpenAI, sélectionner <strong>GPT Live Transcribe</strong> : l’audio est envoyé au fournisseur. Les performances dépendent de l’ordinateur ou du service utilisé.</p></div><div class="price">selon le service</div></div>
+        <div class="provider"><div><h3>Brave Search</h3><p>Autre fournisseur pour le web et les images. Consulter son compte fournisseur pour les crédits et les tarifs.</p></div><div class="price">selon l’offre</div></div>
+      </div>
+      <div class="grid-2">
+        <article class="card soft"><h3>Créer une clé de recherche</h3><ol class="step-list"><li>Ouvrir <a href="https://serper.dev/">serper.dev</a>, choisir <strong>Sign up</strong>, puis créer une clé dans le tableau de bord.</li><li>Dans Pepper, choisir <strong>Google via Serper</strong>, coller la clé, mettre <code>fr</code> en langue et en pays, puis enregistrer.</li><li>Cliquer sur <strong>Tester les réglages enregistrés</strong>. La même clé sert au web, aux images et aux fiches de visite.</li></ol><p class="mini">Alternative : <a href="https://brave.com/search/api/">Brave Search API</a> → créer un compte, activer une offre, ouvrir <strong>API Keys</strong>, puis coller la clé dans Pepper.</p></article>
+        <article class="card soft"><h3>Créer une clé de conversation</h3><ol class="step-list"><li>Pour OpenAI, ouvrir <a href="https://platform.openai.com/api-keys">API keys</a> et créer une clé secrète.</li><li>Pour Anthropic, ouvrir la <a href="https://console.anthropic.com/settings/keys">Console Anthropic</a> et créer une clé API.</li><li>Dans Pepper, choisir le fournisseur et le modèle, coller la clé, puis enregistrer.</li></ol><p class="mini">La clé reste sur l’antenne. Ne pas la mettre dans l’APK, une capture ou le dépôt Git.</p></article>
+        <article class="card"><h3>Choisir la transcription</h3><p><strong>Whisper local</strong> ne demande ni compte ni clé : commencer par le modèle <code>base</code>. Pour OpenAI, la clé de la plateforme sert à <strong>GPT Live Transcribe</strong> ou à un modèle de transcription. Pour AWS Transcribe, créer une identité IAM avec une région et les permissions minimales, puis renseigner la clé d’accès, la clé secrète et la région.</p><p class="mini"><a href="https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html">Documentation AWS Transcribe Streaming</a></p></article>
+        <article class="card"><h3>Après l’enregistrement</h3><p>Il n’est pas nécessaire de relancer Docker pour changer de fournisseur. Le réglage est utilisé à la prochaine demande. Sans fournisseur web, Pepper indique qu’il ne peut pas accéder aux informations en ligne et n’invente pas de résultat.</p><div class="callout"><strong>Pour AWS :</strong> Bedrock et Transcribe utilisent des credentials IAM, pas une clé unique. Une identité dédiée et des permissions limitées sont recommandées.</div></article>
+      </div>
+      <div class="callout"><strong>Règle pratique :</strong> la médiathèque préparée par le client est toujours prioritaire. Une image web est mise en cache, mais sa licence doit être vérifiée avant une utilisation publique.</div>
+    </section>
+
+    <section class="section">
+      <p class="eyebrow">04 · visite</p><h2>Préparer un accueil personnalisé</h2>
+      <div class="grid-2">
+        <article class="card"><h3>Une fiche validée avant l’arrivée</h3><ol class="step-list"><li>Saisir l’entreprise, son site officiel, les visiteurs et l’objectif.</li><li>Lancer la recherche pour obtenir un brouillon et les liens sources.</li><li>Relire, corriger et cocher <strong>J’ai relu la fiche et vérifié qu’il s’agit de la bonne entreprise</strong>.</li><li>Cocher <strong>Utiliser cet accueil personnalisé</strong>, puis cliquer sur <strong>Enregistrer l’accueil</strong>. Le réglage s’applique aux prochains échanges ; l’accueil spontané se règle sur la tablette.</li></ol></article>
+        <article class="card soft"><h3>Ce que Pepper doit faire</h3><p>Pepper accueille sans inventer l’identité d’une personne ni transformer une supposition en fait. Il peut orienter vers les lieux renseignés, afficher une image et continuer la discussion avec le contexte de l’entreprise.</p><p>Pour chaque lieu, renseigner la phrase à dire puis choisir <strong>Ne pas pointer</strong>, <strong>Pointer à gauche</strong> ou <strong>Pointer à droite</strong>. Exemple : « au fond du couloir » + « Pointer à droite » ; Pepper donnera l’indication et pointera à droite si l’on demande où se trouve le lieu.</p><p class="mini">Couper l’accueil désactive le comportement sans effacer la fiche.</p></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="eyebrow">05 · expérience</p><h2>Ce que voit et entend le visiteur</h2>
+      <div class="grid-3">
+        <article class="card"><span class="icon">◉</span><h3>Parler à Pepper</h3><p>Dire « Pepper » ou toucher <strong>Parler</strong> pour commencer. La boule indique l’écoute, le traitement et la réponse. Une image reste visible quelques secondes (environ 8 secondes par défaut), puis disparaît automatiquement. Si Pepper reçoit plusieurs images, elles passent dans l’ordre comme un carrousel ; toucher l’image pour l’interrompre. Le bouton de sourdine coupe l’écoute.</p></article>
+        <article class="card"><span class="icon">✦</span><h3>Fin de conversation</h3><p>Dire <strong>« Merci Pepper, à bientôt »</strong> ou <strong>« Au revoir »</strong>. Pepper termine sa réponse, puis arrête l’écoute de conversation : seule la détection du mot « Pepper » reste active.</p><p>Sans formule de clôture, Pepper écoute la suite après sa réponse. Sans nouvelle parole pendant le délai d’écoute, la conversation se termine et Pepper revient en attente de « Pepper ». Dire son nom ou toucher <strong>Parler</strong> pour recommencer.</p><p class="mini"><strong>J’ai terminé</strong> envoie la phrase en cours ; ce bouton ne termine pas toute la conversation.</p></article>
+        <article class="card"><span class="icon">⌁</span><h3>Menu et manette</h3><p>Sur la tablette, toucher <strong>Menu</strong> pour afficher les rubriques et les réglages, puis <strong>Fermer</strong> pour replier la navigation et laisser plus de place à la conversation.</p><p>La manette permet de se déplacer et de déclencher les actions configurées. Les gestes se trouvent dans <strong>Actions</strong> ; les boutons se règlent dans <strong>Manette</strong>.</p></article>
+      </div>
+    <div class="callout"><strong>Après une clôture explicite :</strong> l’accueil automatique reste bloqué, même si Pepper détecte une personne ou si le micro est coupé puis réactivé. Dire <strong>« Pepper »</strong> ou toucher <strong>Parler</strong> pour reprendre et lever ce blocage. <strong>« Merci »</strong> ou <strong>« Merci Pepper »</strong> seuls ne terminent pas la conversation ; une formule suivie d’une nouvelle question conserve aussi l’échange.</div>
+    </section>
+
+    <section class="section">
+      <p class="eyebrow">06 · connexion</p><h2>Appairer Pepper et vérifier le parcours</h2>
+      <div class="card"><ol class="step-list"><li>Dans l’administration, ouvrir <strong>Connecter Pepper</strong> et afficher le jeton d’appairage.</li><li>Sur la tablette, ouvrir <strong>Cerveau</strong>, saisir l’adresse réseau de l’antenne et ce jeton. Ne pas utiliser le jeton administrateur ni l’adresse <code>localhost</code> sur Pepper.</li><li>Tester dans cet ordre : réveil vocal, écoute, transcription, réponse, retour en attente après un silence, menu repliable, affichage d’une image, geste et déplacement à la manette.</li></ol></div>
+    <div class="card"><h3>Vérifier la fin de conversation</h3><ol class="step-list"><li>Dire « Merci » pendant un échange : Pepper répond et écoute la suite.</li><li>Dire « Merci Pepper, à bientôt » : attendre sa réponse complète, puis vérifier le retour en attente de « Pepper ».</li><li>Parler entre visiteurs sans prononcer « Pepper » : la conversation ne doit pas repartir. Vérifier aussi que la détection d’une personne et la coupure puis réactivation du micro ne relancent pas l’accueil automatique.</li><li>Dire « Pepper » pour reprendre, puis refaire la clôture et vérifier la reprise avec <strong>Parler</strong>.</li></ol></div>
+    </section>
+
+    <section class="section">
+      <p class="eyebrow">07 · dépannage</p><h2>Les cinq vérifications rapides</h2>
+      <div class="card"><table><thead><tr><th>Symptôme</th><th>À vérifier</th></tr></thead><tbody><tr><td>Pepper ne répond pas</td><td>Docker est ouvert, l’antenne répond et les deux appareils sont sur le même réseau.</td></tr><tr><td>Pas de transcription</td><td>Whisper est téléchargé ou la clé STT choisie est configurée.</td></tr><tr><td>Pas d’image</td><td>Serper est sélectionné et crédité ; essayer une requête plus précise.</td></tr><tr><td>Accueil vide</td><td>La fiche de visite est validée et le fournisseur web est configuré.</td></tr><tr><td>Clé refusée</td><td>La remplacer dans l’interface ; ne jamais la mettre dans l’APK ou dans l’URL.</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <footer>Guide Pepper · conserver ce document avec le ZIP client · les tarifs et disponibilités des fournisseurs peuvent évoluer.</footer>
+</body>
+</html>

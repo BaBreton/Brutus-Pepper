@@ -1,0 +1,14 @@
+[Unit]
+Description=Brutus Pepper Whisper transcription server (tiny)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/pepper/services/whisper.cpp/build/bin/whisper-server --model /opt/pepper/services/stt/models/ggml-tiny-q5_1.bin --host 0.0.0.0 --port 8764 --threads 4 --language fr --no-gpu
+Restart=on-failure
+RestartSec=3
+WorkingDirectory=/opt/pepper/services/whisper.cpp
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Brutus Pepper</string>
+    <string name="status_waiting">En attente de Pepper</string>
+    <string name="hello_button">Bonjour</string>
+</resources>

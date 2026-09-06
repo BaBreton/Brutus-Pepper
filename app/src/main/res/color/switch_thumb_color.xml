@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le Switch framework ignore android:colorAccent sur cette version d'Android et
+     reste au vert système par défaut. On force donc le bleu de marque. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/blue" />
+    <item android:color="@color/surface" />
+</selector>

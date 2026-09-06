@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Même correctif que les Switch : la case à cocher framework ignore
+     android:colorAccent sur cette version d'Android et reste au vert système. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@color/blue" />
+    <item android:color="@color/ink_3" />
+</selector>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Styles de la tablette. Les tailles sont calibrées pour un écran de 1280×800 regardé
+  à un mètre et touché au doigt : rien d'interactif en dessous de 56 dp de haut, et
+  du texte plus gros qu'on ne l'écrirait pour un écran de bureau.
+-->
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">@color/blue</item>
+        <item name="android:windowBackground">@color/canvas</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+    </style>
+
+    <!-- Action principale : bleu plein, texte blanc. -->
+    <style name="ActionControl">
+        <item name="android:background">@drawable/hello_button_background</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:padding">14dp</item>
+        <item name="android:textColor">@color/on_accent</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="PanelTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Phrase sous un titre : dit à quoi sert la page, en une ligne. -->
+    <style name="PanelLede">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">22dp</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:lineSpacingMultiplier">1.25</item>
+    </style>
+
+    <!-- Titre d'une section à l'intérieur d'une page. -->
+    <style name="SectionTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="SectionHint">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:textColor">@color/ink_3</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+    </style>
+
+    <!-- Carte blanche : conteneur d'une section. -->
+    <style name="Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/card_surface</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">22dp</item>
+    </style>
+
+    <!-- Entrée du rail de navigation. L'écran courant porte state_selected. -->
+    <style name="NavControl">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">68dp</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:background">@drawable/nav_item_background</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/nav_label_color</item>
+        <!-- Même teinte que l'étiquette : sans elle, l'icône reste blanc vif sous un
+             libellé estompé, et l'entrée a l'air à moitié sélectionnée. -->
+        <item name="android:drawableTint">@color/nav_label_color</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+
+    <!-- Étiquette au-dessus d'un champ. -->
+    <style name="FieldLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_marginBottom">7dp</item>
+        <item name="android:textColor">@color/ink_2</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="ProviderInput">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:background">@drawable/provider_input_background</item>
+        <item name="android:paddingLeft">18dp</item>
+        <item name="android:paddingRight">18dp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textColorHint">#A3B2C9</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+</resources>

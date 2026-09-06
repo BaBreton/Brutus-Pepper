@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"><!-- Le fond vient du thème (windowBackground) :
+    le repeindre ici ferait dessiner deux fois la même couleur sur toute la surface. -->
+
+<LinearLayout
+    android:id="@+id/mainPanels"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginTop="60dp"
+    android:orientation="horizontal">
+
+    <FrameLayout
+        android:id="@+id/contentFrame"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="26dp">
+
+        <include layout="@layout/panel_conversation" />
+
+        <!-- ═══════════════════ ACTIONS PANEL ═══════════════════ -->
+        <ScrollView
+            android:id="@+id/actionsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView style="@style/PanelTitle" android:text="Actions" />
+
+                <TextView
+                    style="@style/PanelLede"
+                    android:text="Faire faire quelque chose à Pepper tout de suite, sans manette et sans le lui demander à voix haute. Dégagez de l'espace autour de lui avant les mouvements." />
+
+                <LinearLayout
+                    android:id="@+id/actionsList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/actionsStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center"
+                    android:textColor="@color/ink_2"
+                    android:textSize="16sp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ═══════════════════ GAMEPAD PANEL ═══════════════════ -->
+        <LinearLayout
+            android:id="@+id/gamepadPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Status bar -->
+            <TextView
+                android:id="@+id/gamepadStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/status_pill_background"
+                android:gravity="center"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="10dp"
+                android:text="Aucune manette détectée"
+                android:textColor="@color/blue_dark"
+                android:textSize="14sp" />
+
+            <!-- Controller body -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@drawable/controller_background"
+                android:layout_margin="6dp"
+                android:orientation="vertical">
+
+                <!-- ── ROW 1: Triggers (LT / RT) ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/bindLeftTrigger"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/button_trigger"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="2" />
+
+                    <TextView
+                        android:id="@+id/bindRightTrigger"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/button_trigger"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- ── ROW 2: Bumpers (LB / RB) ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/bindLeftBumper"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginTop="3dp"
+                        android:background="@drawable/button_shoulder"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="2" />
+
+                    <TextView
+                        android:id="@+id/bindRightBumper"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginTop="3dp"
+                        android:background="@drawable/button_shoulder"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- ── ROW 3: Main body (L-stick | Select+Start | Face+R-stick) ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="8dp">
+
+                    <!-- LEFT COLUMN: L-joystick (haut) + espace bas -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="top|center_horizontal"
+                        android:paddingTop="4dp">
+
+                        <TextView
+                            android:layout_width="130dp"
+                            android:layout_height="130dp"
+                            android:background="@drawable/joystick_background"
+                            android:gravity="center"
+                            android:text="◈"
+                            android:textColor="#5A80BB"
+                            android:textSize="28sp" />
+                    </LinearLayout>
+
+                    <!-- CENTER COLUMN: Select + Start (empilés) -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/bindSelect"
+                            android:layout_width="110dp"
+                            android:layout_height="42dp"
+                            android:layout_marginBottom="12dp"
+                            android:background="@drawable/button_center"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/bindStart"
+                            android:layout_width="110dp"
+                            android:layout_height="42dp"
+                            android:background="@drawable/button_center"
+                            android:gravity="center"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- RIGHT COLUMN: Face buttons (haut) + R-joystick (bas) -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="top|center_horizontal"
+                        android:paddingTop="4dp">
+
+                        <!-- Face buttons cluster: 3x3 grid -->
+                        <FrameLayout
+                            android:layout_width="200dp"
+                            android:layout_height="200dp">
+
+                            <!-- Y / △ — top — yellow -->
+                            <TextView
+                                android:id="@+id/bindY"
+                                android:layout_width="72dp"
+                                android:layout_height="72dp"
+                                android:layout_gravity="top|center_horizontal"
+                                android:background="@drawable/button_face_y"
+                                android:gravity="center"
+                                android:textColor="#1A1A1A"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <!-- A / □ — bottom — green -->
+                            <TextView
+                                android:id="@+id/bindA"
+                                android:layout_width="72dp"
+                                android:layout_height="72dp"
+                                android:layout_gravity="bottom|center_horizontal"
+                                android:background="@drawable/button_face_a"
+                                android:gravity="center"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <!-- X / ✕ — left — blue -->
+                            <TextView
+                                android:id="@+id/bindX"
+                                android:layout_width="72dp"
+                                android:layout_height="72dp"
+                                android:layout_gravity="center_vertical|left"
+                                android:background="@drawable/button_face_x"
+                                android:gravity="center"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <!-- B / ○ — right — red -->
+                            <TextView
+                                android:id="@+id/bindB"
+                                android:layout_width="72dp"
+                                android:layout_height="72dp"
+                                android:layout_gravity="center_vertical|right"
+                                android:background="@drawable/button_face_b"
+                                android:gravity="center"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </FrameLayout>
+
+                        <!-- R-joystick sous les boutons (PS4 style) -->
+                        <TextView
+                            android:layout_width="100dp"
+                            android:layout_height="100dp"
+                            android:layout_marginTop="8dp"
+                            android:layout_gravity="center_horizontal"
+                            android:background="@drawable/joystick_background"
+                            android:gravity="center"
+                            android:text="◈"
+                            android:textColor="#5A80BB"
+                            android:textSize="22sp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/providerPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <TextView style="@style/PanelTitle" android:text="Cerveau" />
+
+                <TextView
+                    style="@style/PanelLede"
+                    android:text="Pepper ne détient aucune clé. Fournisseurs, modèles, médiathèque et mode hospitalité s'administrent sur la page web du cerveau. Ici, on lui dit seulement où le trouver." />
+
+                <LinearLayout style="@style/Card">
+
+                    <TextView style="@style/FieldLabel"
+                        android:layout_marginTop="0dp"
+                        android:text="Adresse du cerveau" />
+
+                    <EditText
+                        android:id="@+id/brainAddress"
+                        style="@style/ProviderInput"
+                        android:hint="antenna.local"
+                        android:inputType="textUri" />
+
+                    <TextView style="@style/FieldLabel" android:text="Jeton d'appairage" />
+
+                    <EditText
+                        android:id="@+id/brainToken"
+                        style="@style/ProviderInput"
+                        android:hint="collez le jeton affiché sur la page du cerveau"
+                        android:inputType="textVisiblePassword"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/brainSave"
+                        style="@style/ActionControl"
+                        android:layout_width="match_parent"
+                        android:layout_height="68dp"
+                        android:layout_marginTop="24dp"
+                        android:gravity="center"
+                        android:text="Connecter"
+                        android:textSize="19sp" />
+
+                    <TextView
+                        android:id="@+id/brainStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text=""
+                        android:textColor="@color/blue_dark"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/brainDetails"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:lineSpacingMultiplier="1.25"
+                        android:text="Non connecté"
+                        android:textColor="@color/ink_2"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ═══════════════════ PREFERENCES PANEL ═══════════════════ -->
+        <ScrollView
+            android:id="@+id/preferencesPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView style="@style/PanelTitle" android:text="Réglages" />
+
+                <TextView
+                    style="@style/PanelLede"
+                    android:text="Comment Pepper se comporte face aux gens. Ces deux réglages restent en mémoire quand on éteint le robot." />
+
+                <!-- ── Section: Auto-engagement ── -->
+                <LinearLayout style="@style/Card">
+                    <TextView style="@style/SectionTitle" android:text="Aller vers les visiteurs" />
+                    <TextView
+                        style="@style/SectionHint"
+                        android:text="Pepper repère les personnes autour de lui et s'avance vers elles pour engager la conversation. À laisser actif dans un hall d'accueil ; à couper si le robot doit rester en place." />
+                    <CheckBox
+                        android:id="@+id/autoEngageCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/checkbox_tint_color"
+                        android:checked="false"
+                        android:minHeight="56dp"
+                        android:paddingStart="10dp"
+                        android:text="Aller vers un humain détecté"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp" />
+                </LinearLayout>
+
+                <!-- ── Section: Mode conversation ── -->
+                <LinearLayout
+                    style="@style/Card"
+                    android:layout_marginTop="16dp">
+                    <TextView style="@style/SectionTitle" android:text="Parler sans appuyer" />
+                    <TextView
+                        style="@style/SectionHint"
+                        android:text="Pepper guette le mot « Pepper » et enchaîne les réponses tout seul, sans qu'on touche l'écran. Coupé, il n'écoute que sur demande." />
+                    <Switch
+                        android:id="@+id/conversationSwitch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:minHeight="56dp"
+                        android:paddingStart="10dp"
+                        android:thumbTint="@color/switch_thumb_color"
+                        android:trackTint="@color/switch_track_color"
+                        android:text="Écouter le mot « Pepper »"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp" />
+                </LinearLayout>
+
+                <!-- ── Section: Reconnaissance vocale (info) ── -->
+                <LinearLayout
+                    style="@style/Card"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp">
+                    <TextView style="@style/SectionTitle" android:text="Reconnaissance du mot d'éveil" />
+                    <TextView
+                        style="@style/SectionHint"
+                        android:layout_marginBottom="0dp"
+                        android:text="Vosk, embarqué sur la tablette. Il fonctionne hors-ligne et ne fait sortir aucun son du robot : seule la phrase qui suit le mot d'éveil part vers le cerveau." />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+    </FrameLayout>
+
+</LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/presentationOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/stage"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="invisible">
+
+        <TextView
+            android:id="@+id/sceneText"
+            android:layout_marginBottom="96dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:padding="48dp"
+            android:textColor="@color/stage_text"
+            android:textSize="64sp"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/sceneImage"
+            android:layout_marginBottom="96dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Média affiché"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
+        <VideoView
+            android:id="@+id/sceneVideo"
+            android:layout_marginBottom="96dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/kioskPanel"
+            android:layout_marginBottom="96dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="48dp"
+            android:visibility="gone">
+            <TextView
+                android:id="@+id/kioskDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/stage_muted"
+                android:textSize="42sp" />
+            <TextView
+                android:id="@+id/kioskTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:textColor="@color/stage_text"
+                android:textSize="104sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="80dp"
+            android:layout_gravity="bottom" android:layout_margin="8dp"
+            android:background="@drawable/conversation_card" android:paddingHorizontal="12dp"
+            android:orientation="horizontal" android:gravity="center_vertical" android:clickable="true">
+            <com.brutus.pepper.VoiceOrbView android:id="@+id/sceneVoiceOrb"
+                android:layout_width="72dp" android:layout_height="72dp"
+                android:importantForAccessibility="no" />
+            <TextView android:id="@+id/sceneVoiceState" android:layout_width="0dp"
+                android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="Micro coupé" android:textSize="16sp" android:textColor="@color/ink" />
+            <TextView android:id="@+id/sceneTalk" style="@style/ActionControl"
+                android:layout_width="wrap_content" android:layout_height="56dp"
+                android:paddingHorizontal="18dp" android:gravity="center"
+                android:text="Parler" android:textSize="16sp" />
+            <Switch android:id="@+id/sceneMicroSwitch" android:layout_width="wrap_content"
+                android:layout_height="56dp" android:layout_marginStart="18dp"
+                android:text="Micro  " android:textSize="14sp" android:textColor="@color/ink"
+                android:thumbTint="@color/switch_thumb_color" android:trackTint="@color/switch_track_color" />
+            <TextView android:id="@+id/sceneReturn" android:layout_width="80dp"
+                android:layout_height="56dp" android:layout_marginStart="12dp"
+                android:gravity="center" android:text="Retour" android:textColor="@color/ink"
+                android:clickable="true" android:focusable="true" />
+        </LinearLayout>
+    </FrameLayout>
+    <!-- Root siblings remain accessible above every panel, including media and kiosk. -->
+    <LinearLayout
+        android:id="@+id/navigationRail"
+        android:layout_width="92dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="@color/rail"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingTop="64dp"
+        android:paddingBottom="16dp"
+        android:visibility="gone">
+        <TextView android:id="@+id/navHome" style="@style/NavControl" android:drawableTop="@drawable/ic_voice" android:text="ACCUEIL" />
+        <TextView android:id="@+id/navActions" style="@style/NavControl" android:text="ACTIONS" />
+        <TextView android:id="@+id/navGamepad" style="@style/NavControl" android:drawableTop="@drawable/ic_gamepad" android:text="MANETTE" />
+        <TextView android:id="@+id/navProvider" style="@style/NavControl" android:drawableTop="@drawable/ic_settings" android:text="CERVEAU" />
+        <TextView android:id="@+id/navPreferences" style="@style/NavControl" android:text="RÉGLAGES" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/navToggle"
+        android:layout_width="88dp"
+        android:layout_height="56dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="2dp"
+        android:background="@drawable/nav_item_background"
+        android:text="@string/open_navigation"
+        android:contentDescription="@string/open_navigation"
+        android:gravity="center"
+        android:padding="8dp"
+        android:textColor="@color/blue_dark"
+        android:textSize="14sp"
+        android:clickable="true"
+        android:focusable="true" />
+</FrameLayout>

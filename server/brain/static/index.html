@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pepper — Espace hôte</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+
+<aside>
+<a class="brand" href="/"><span class="mark">◉</span> pepper<small>ESPACE HÔTE</small></a>
+<nav id="navigation" aria-label="Administration" hidden>
+<button data-page="visit" aria-current="page">Préparer une visite</button>
+<button data-page="media">Images et vidéos</button>
+<button data-page="intelligence">Voix et intelligence</button>
+<button data-page="pairing">Connecter Pepper</button>
+</nav>
+<div class="sidebar-bottom"><p>Visites, médias<br>et réglages de Pepper.</p>
+<div class="status" id="health" role="status">Connexion…</div>
+<button class="ghost" id="logout" hidden>Se déconnecter</button></div>
+</aside>
+
+<main><div id="pageIntro" class="page-intro" hidden><div class="eyebrow">ADMINISTRATION DE PEPPER</div><h1 id="pageTitle"></h1><p id="pageSubtitle"></p></div>
+
+<section id="loginCard">
+  <div class="head">
+
+    <div>
+      <h2>Se connecter à Pepper</h2>
+      <p class="lede">Préparez les visites, ajoutez des médias et réglez les services utilisés par Pepper.</p>
+    </div>
+  </div>
+  <label for="token">Jeton administrateur</label>
+  <input id="token" type="password" autocomplete="off" placeholder="collez le jeton admin">
+  <div class="hint">Relancez le lanceur Pepper en mode <code>setup</code> sur l’ordinateur de l’antenne pour afficher votre jeton administrateur.
+  </div>
+  <button id="login">Se connecter</button>
+  <div class="status" id="loginStatus"></div>
+</section>
+
+<section id="llmCard" hidden>
+  <div class="head">
+
+    <div>
+      <h2>Modèle de conversation</h2>
+      <p class="lede">Choisissez le service qui prépare les réponses de Pepper.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="llmProvider">Fournisseur</label>
+      <select id="llmProvider"></select>
+    </div>
+    <div>
+      <label for="llmModel">Modèle</label>
+      <select id="llmModel"></select>
+    </div>
+  </div>
+  <div id="llmPricing" class="pricing" aria-live="polite"></div>
+  <div id="llmCreds"></div>
+  <button id="saveLlm">Enregistrer</button>
+  <div class="status" id="llmStatus"></div>
+</section>
+
+<section id="sttCard" hidden>
+  <div class="head">
+
+    <div>
+      <h2>Transcription de la voix</h2>
+      <p class="lede">Le son est transmis pendant que vous parlez. Choisissez OpenAI → GPT Live Transcribe pour le texte en continu, ou Whisper local pour conserver l’audio sur votre réseau.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="sttProvider">Fournisseur</label>
+      <select id="sttProvider"></select>
+    </div>
+    <div>
+      <label for="sttModel">Modèle</label>
+      <select id="sttModel"></select>
+    </div>
+  </div>
+  <div id="sttPricing" class="pricing" aria-live="polite"></div>
+        <div class="hint">
+    En local, commencez par <code>base</code> sur une petite machine et vérifiez les noms propres.
+    Les résultats intermédiaires locaux sont désactivés par défaut pour éviter de ralentir la réponse.
+    Le mode OpenAI est facturé par le fournisseur et transmet l’audio hors du réseau ; son accès et sa latence sont à valider avec votre compte.
+  </div>
+  <div id="sttCreds"></div>
+  <button id="saveStt">Enregistrer</button>
+  <div class="status" id="sttStatus"></div>
+</section>
+
+<section id="searchCard" hidden>
+  <div class="head">
+
+    <div>
+      <h2>Recherche web et images</h2>
+      <p class="lede">
+        Sert à deux choses : trouver une image quand on lui en demande une, et chercher
+        une réponse sur Internet quand Pepper ne la connaît pas. Serper donne accès aux
+        résultats Google pour ces deux usages, avec une seule clé.
+      </p>
+    </div>
+  </div>
+  <label for="image_searchProvider">Fournisseur</label>
+  <select id="image_searchProvider"></select>
+  <div id="image_searchPricing" class="pricing" aria-live="polite"></div>
+  <div class="hint">
+    Recommandé : Google via Serper, pour les images, les informations et les visites.
+    <a href="https://serper.dev/" target="_blank" rel="noopener noreferrer">Créer un compte Serper</a>,
+    copier la clé API ci-dessous, puis enregistrer. Consultez votre compte Serper pour les crédits et les tarifs.
+    Brave reste disponible ; Wikimedia reste une solution sans clé limitée aux images.
+    Les licences des images restent à respecter.
+  </div>
+  <div id="imageContactFields" hidden>
+    <label for="imageContact">Contact pour Wikimedia · facultatif</label>
+    <input id="imageContact" maxlength="300" placeholder="vous@exemple.fr ou https://votre-site.fr">
+    <p class="hint">Un e-mail ou un site permet à Wikimedia de vous joindre si ses requêtes sont limitées.</p>
+  </div>
+  <div id="image_searchCreds"></div>
+  <button id="saveImageSearch">Enregistrer</button>
+  <div class="status" id="image_searchStatus"></div>
+  <label for="searchPreviewQuery">Essayer une recherche d’image</label>
+  <input id="searchPreviewQuery" maxlength="200" placeholder="Ex. musée du Louvre Paris">
+  <button class="ghost" id="searchPreviewButton">Tester les réglages enregistrés</button>
+  <p class="hint">Utilise au plus une recherche payante ; un média déjà présent est prioritaire.</p>
+  <div class="status" id="searchPreviewStatus" role="status"></div>
+  <img id="searchPreviewImage" alt="Résultat de la recherche" hidden style="max-width:100%;max-height:320px;border-radius:12px">
+</section>
+
+<section id="pairingCard" hidden>
+  <div class="head">
+
+    <div>
+      <h2>Appairage du robot</h2>
+      <p class="lede">Sur la tablette, ouvrez « Cerveau ». Saisissez l’adresse réseau affichée par le lanceur Pepper, puis le code ci-dessous. Le robot et l’antenne doivent être sur le même réseau.</p>
+    </div>
+  </div>
+  <div class="token" id="pairingToken">…</div>
+  <p class="hint">N’utilisez pas « localhost » sur la tablette. Réservez la connexion HTTP au réseau privé de confiance ; tout accès distant nécessite HTTPS et une protection réseau.</p>
+  <button class="ghost" id="rotatePairing">Régénérer le jeton</button>
+  <div class="status warn" id="pairingStatus">
+    Régénérer invalide le jeton actuel : le robot devra être ré-appairé.
+  </div>
+</section>
+
+<section id="hospitalityCard" hidden>
+<div class="eyebrow">LA PROCHAINE VISITE</div><h2>Qui recevez-vous ?</h2>
+<p class="lede">Une fiche courte suffit pour donner du contexte à Pepper. Rien ne s’active avant votre enregistrement.</p>
+<div class="row"><div><label for="visitCompany">Entreprise invitée</label><input id="visitCompany" maxlength="160" placeholder="Ex. Atelier Horizon"></div>
+<div><label for="visitDomain">Site officiel · facultatif</label><input id="visitDomain" maxlength="300" placeholder="entreprise.fr"></div></div>
+<button class="ghost compact" id="researchVisit">Rechercher sur Internet ↗</button>
+<div class="status" id="researchStatus" role="status">Avec Serper ou Brave et votre modèle configuré. Vous pouvez aussi remplir la fiche vous-même.</div>
+<div class="row"><div><label for="visitVisitors">Vos visiteurs · un par ligne</label><textarea id="visitVisitors" placeholder="Prénom et nom"></textarea></div>
+<div><label for="visitObjective">L’objet de la visite</label><textarea id="visitObjective" maxlength="1000" placeholder="Découverte des espaces, échange autour d’un projet…"></textarea></div></div>
+<label for="visitBrief">Ce que Pepper doit savoir de cette entreprise</label><textarea id="visitBrief" class="brief" maxlength="6000" placeholder="Activité, sujets utiles pour engager la conversation, informations vérifiées…"></textarea>
+<div id="visitSources" class="sources"></div>
+<label class="check"><input type="checkbox" id="visitValidated"><span>J’ai relu la fiche et vérifié qu’il s’agit de la bonne entreprise.</span></label>
+<details><summary>Votre lieu et vos consignes d’accueil</summary>
+<label for="company">Votre entreprise / votre lieu</label><input id="company" maxlength="160" placeholder="Ex. Maison Lafontaine">
+<label for="mission">Le rôle de Pepper</label><textarea id="mission" maxlength="500" placeholder="Accueillir chaleureusement, présenter nos activités et guider les visiteurs."></textarea>
+<label for="visitors">Noms à connaître en dehors de cette visite</label><textarea id="visitors"></textarea>
+<label for="notes">Consignes et informations pratiques</label><textarea id="notes" maxlength="6000" placeholder="Horaires, consignes, choses à éviter…"></textarea>
+<h3>Les lieux à indiquer</h3><p class="hint place-help">Pour chaque lieu, écrivez ce que Pepper doit dire, puis choisissez le côté vers lequel il doit pointer. Exemple : « au fond du couloir » + « Pointer à droite ».</p><div id="places"></div><button class="ghost compact" id="addPlace">Ajouter un lieu</button>
+</details>
+<div class="activation"><label class="check"><input id="hospitalityActive" type="checkbox"><span>Utiliser cet accueil personnalisé</span></label>
+<p class="hint">Après enregistrement, appliqué aux prochains échanges. L’accueil spontané se règle aussi sur la tablette.</p>
+<div class="actions"><button id="saveHospitality">Enregistrer l’accueil</button><button class="ghost" id="previewVisit">Prévisualiser la phrase d’accueil</button></div></div>
+<div class="status" id="hospitalityStatus" role="status"></div>
+<div id="greetingPreview" class="quote" hidden><div class="eyebrow">APERÇU DE L’ACCUEIL</div><p id="greetingText"></p></div>
+</section>
+
+
+<section id="mediaCard" class="wide" hidden>
+  <div class="head">
+
+    <div>
+      <h2>Médiathèque</h2>
+      <p class="lede">
+        Vos images et vidéos, que Pepper affiche sur sa tablette quand on les lui demande.
+        Donnez un nom prononçable : c'est celui qu'il entendra. « Montre-moi le plan du
+        site » affichera le média nommé « Plan du site ».
+      </p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="mediaName">Nom du média</label>
+      <input id="mediaName" placeholder="ex. Plan du site">
+    </div>
+    <div>
+      <label for="mediaFile">Fichier — JPEG, PNG, WebP ou MP4 H.264</label>
+      <input id="mediaFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4">
+    </div>
+  </div>
+  <button id="upload">Ajouter</button>
+  <div class="status" id="uploadStatus"></div>
+  <div id="mediaList"></div>
+</section>
+
+<footer>Pepper · L’antenne doit rester allumée pendant l’accueil.</footer></main>
+
+<script defer src="/static/admin.js"></script>
+</body>
+</html>
