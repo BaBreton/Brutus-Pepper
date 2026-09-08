@@ -25,6 +25,20 @@ class HumanEngagementListener(
     private var lastHuman: Human? = null
     private var resetLastHumanRunnable: Runnable? = null
 
+    /**
+     * Vrai tant que Pepper voit quelqu'un devant lui.
+     *
+     * Sert à savoir quand le hall s'est vidé : c'est à ce moment-là que l'image
+     * d'accueil revient et que le robot se remet face à l'entrée. Volatile parce que
+     * le battement de MainActivity la lit hors du fil principal.
+     *
+     * Suit le même anti-rebond que l'engagement : une personne perdue une seconde
+     * parce qu'elle s'est tournée ne doit pas faire croire que la salle est vide.
+     */
+    @Volatile
+    var humanPresent: Boolean = false
+        private set
+
     private val listener = HumanAwareness.OnRecommendedHumanToEngageChangedListener { human ->
         // This callback arrives on a QiSDK thread; dispatch to main thread for state access
         mainHandler.post { onRecommendedHumanChanged(human) }
@@ -72,6 +86,7 @@ class HumanEngagementListener(
             }
             lastHuman = null
             lastEngageTimeMs = 0L
+            humanPresent = false
         }
     }
 
@@ -99,6 +114,7 @@ class HumanEngagementListener(
                 val runnable = Runnable {
                     Log.d(TAG, "Debounce timer expired: resetting lastHuman to null")
                     lastHuman = null
+                    humanPresent = false
                     resetLastHumanRunnable = null
                 }
                 resetLastHumanRunnable = runnable
@@ -107,6 +123,7 @@ class HumanEngagementListener(
             return
         }
 
+        humanPresent = true
         // Cancel pending reset if human returns
         resetLastHumanRunnable?.let {
             mainHandler.removeCallbacks(it)

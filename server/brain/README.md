@@ -124,8 +124,10 @@ Sur la tablette, dans **Réglages** → « Rester face à l’entrée » : l’i
 le robot se trouve. Elle est retenue automatiquement à la connexion du robot ; il faut
 la redéfinir après l’avoir déplacé.
 
-Le retour a lieu au moment où l’image d’accueil revient, c’est-à-dire après trente
-secondes de calme, et par le chemin le plus court. Un écart de moins de cinq degrés
+Le retour a lieu au moment où l’image d’accueil revient : **quand Pepper ne voit plus
+personne**. Tant qu’une personne est devant lui, même silencieuse, rien ne se déclenche
+— ni l’image, ni le pivot. Une fois le hall vide, le délai de trente secondes court, et
+le robot se remet face à l’entrée par le chemin le plus court. Un écart de moins de cinq degrés
 ne déclenche rien : un hall vide ne doit pas faire frémir le socle en boucle. Un
 visiteur qui se présente pendant la rotation l’interrompt.
 

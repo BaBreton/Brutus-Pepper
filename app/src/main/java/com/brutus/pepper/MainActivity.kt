@@ -1498,6 +1498,10 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
             }
         }
 
+        // Quelqu'un devant le robot compte comme de l'activité : tant qu'une personne
+        // est là, même silencieuse, ni l'image d'accueil ni le retour face à l'entrée
+        // ne doivent lui passer sous le nez. Le hall doit d'abord se vider.
+        if (engagementListener?.humanPresent == true) idleImages.noteActivity(now)
         val conversationIdle = currentConvState == ConversationController.State.IDLE_WAKE &&
             conversationController?.isBusy() != true
         if (idleImages.consumeReadyForNextVisitor(now, conversationIdle)) readyForNextVisitor()

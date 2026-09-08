@@ -120,6 +120,27 @@ class IdleImageControllerTest {
     }
 
     @Test
+    fun `une personne devant le robot repousse le retour a l'accueil`() {
+        // MainActivity signale la présence à chaque battement : tant que quelqu'un est
+        // là, même sans parler, l'image ne doit pas lui tomber dessus et le robot ne
+        // doit pas pivoter vers la porte.
+        val idle = controller()
+        idle.setImage(image)
+        idle.noteActivity(0L)
+        var maintenant = 0L
+        repeat(20) {                       // 100 s de présence, par battements de 5 s
+            maintenant += 5_000
+            idle.noteActivity(maintenant)  // quelqu'un est toujours là
+            assertFalse(idle.shouldShow(maintenant, conversationIdle = true, sceneBusy = false))
+            assertFalse(idle.consumeReadyForNextVisitor(maintenant, conversationIdle = true))
+        }
+        // La personne s'en va : plus rien n'est signalé, le délai court enfin.
+        assertFalse(idle.shouldShow(maintenant + delay - 1, conversationIdle = true, sceneBusy = false))
+        assertTrue(idle.shouldShow(maintenant + delay, conversationIdle = true, sceneBusy = false))
+        assertTrue(idle.consumeReadyForNextVisitor(maintenant + delay, conversationIdle = true))
+    }
+
+    @Test
     fun `le delai de retour est de trente secondes`() {
         assertEquals(30_000L, IdleImageController.DEFAULT_RETURN_DELAY_MS)
     }
