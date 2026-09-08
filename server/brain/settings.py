@@ -14,10 +14,11 @@ DEFAULTS = {
     # noms propres peuvent justifier le passage à small dans la webapp.
     "stt": {"active": "whisper-local", "model": "base", "credentials": {}},
     "image_search": {"provider": "", "contact": "", "credentials": {}},
-    # `greeting` n'est jamais saisi : il est rédigé à l'enregistrement (voir
-    # brain/greeting.py) et rangé ici pour que la tablette l'obtienne sans attendre.
-    "hospitality": {"active": False, "company": "", "visitors": [], "notes": "",
-                    "mission": "", "places": [], "greeting": "", "active_visit": None},
+    # Les fiches d'accueil : une par entreprise ou par lieu reçu, l'hôte bascule de
+    # l'une à l'autre. `active` est l'interrupteur global du mode hospitalité ; les
+    # champs à plat d'avant les fiches sont conservés le temps qu'une installation
+    # existante soit reprise (voir brain/hospitality.normalise).
+    "hospitality": {"active": False, "active_profile": "", "profiles": []},
 }
 
 # Clés considérées comme secrètes : masquées dans public(), préservées si envoyées vides,

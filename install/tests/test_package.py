@@ -35,6 +35,10 @@ class PackageTest(unittest.TestCase):
                 self.assertIn('server/brain/audio_stream.py', names)
                 self.assertIn('server/brain/static/admin.js', names)
                 self.assertIn('install/Pepper.command', names)
+                # Le poste Windows du client s'installe avec ces deux fichiers ;
+                # les oublier livrerait un paquet sans chemin d'installation Windows.
+                self.assertIn('install/Install-Windows.ps1', names)
+                self.assertIn('install/Installer-Pepper.cmd', names)
                 self.assertFalse(any('private' in name or name.endswith('/.env') or name.endswith('.token') for name in names))
                 self.assertTrue(archive.getinfo('install/Pepper.command').external_attr >> 16 & 0o111)
             original = output.read_bytes()

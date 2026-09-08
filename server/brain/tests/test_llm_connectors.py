@@ -204,9 +204,105 @@ class OpenAiConnectorTest(unittest.TestCase):
     def test_les_arguments_existent_dans_le_sdk_reel(self):
         from openai.resources.chat.completions import Completions
 
-        envoyes = {"model", "max_tokens", "messages"}
+        # Les deux orthographes du plafond doivent exister : le connecteur passe de
+        # l'une à l'autre selon le modèle, et une seule des deux suffirait à casser
+        # la moitié du catalogue.
+        envoyes = {"model", "max_tokens", "max_completion_tokens", "messages"}
         reels = set(inspect.signature(Completions.create).parameters)
         self.assertEqual(envoyes - reels, set())
+
+    def test_le_catalogue_ne_propose_que_des_modeles_courants(self):
+        identifiants = [model.id for model in self.connector.models()]
+        self.assertEqual(identifiants, ["gpt-5.6-luna", "gpt-5.6-terra"])
+        # Luna doit rester le premier : c'est le choix par défaut de la webapp, et
+        # devant un visiteur la latence compte plus que la finesse de la réponse.
+        self.assertEqual(identifiants[0], "gpt-5.6-luna")
+
+    def test_le_plafond_de_jetons_suit_la_famille_du_modele(self):
+        from brain.connectors.llm_openai import token_limit_field
+
+        for model in ("gpt-5.6-luna", "gpt-5.6-terra", "gpt-6-astra", "o3-mini", "GPT-5.6-Luna"):
+            self.assertEqual(token_limit_field(model), "max_completion_tokens", model)
+        for model in ("gpt-4.1", "gpt-4.1-mini", "gpt-4o", ""):
+            self.assertEqual(token_limit_field(model), "max_tokens", model)
+
+    def _client_enregistreur(self, appels, erreur_si=None):
+        connector = self
+
+        class Completions:
+            def create(self, **kwargs):
+                appels.append(kwargs)
+                if erreur_si is not None and erreur_si(kwargs):
+                    raise ValueError(
+                        "Unsupported parameter: 'max_tokens' is not supported with "
+                        "this model. Use 'max_completion_tokens' instead.")
+
+                class Choice:
+                    class message:
+                        content = "Salut !"
+
+                class Response:
+                    choices = [Choice()]
+
+                return Response()
+
+        class Chat:
+            completions = Completions()
+
+        class Client:
+            chat = Chat()
+
+        return Client()
+
+    def test_un_modele_recent_recoit_max_completion_tokens(self):
+        appels = []
+        self.connector.complete(
+            credentials={"api_key": "sk-x"}, model="gpt-5.6-luna", system="s",
+            messages=[llm.Message("user", "Salut")], client=self._client_enregistreur(appels))
+        self.assertIn("max_completion_tokens", appels[0])
+        self.assertNotIn("max_tokens", appels[0])
+
+    def test_un_modele_ancien_recoit_max_tokens(self):
+        appels = []
+        self.connector.complete(
+            credentials={"api_key": "sk-x"}, model="gpt-4.1", system="s",
+            messages=[llm.Message("user", "Salut")], client=self._client_enregistreur(appels))
+        self.assertIn("max_tokens", appels[0])
+        self.assertNotIn("max_completion_tokens", appels[0])
+
+    def test_un_modele_inconnu_refuse_est_rejoue_avec_l_autre_orthographe(self):
+        # OpenAI renomme ses modèles : un identifiant hors de la liste de préfixes ne
+        # doit pas laisser un visiteur sans réponse.
+        appels = []
+        client = self._client_enregistreur(
+            appels, erreur_si=lambda kwargs: "max_tokens" in kwargs)
+        text = self.connector.complete(
+            credentials={"api_key": "sk-x"}, model="modele-inedit", system="s",
+            messages=[llm.Message("user", "Salut")], client=client)
+        self.assertEqual(text, "Salut !")
+        self.assertEqual(len(appels), 2)
+        self.assertIn("max_tokens", appels[0])
+        self.assertIn("max_completion_tokens", appels[1])
+
+    def test_une_autre_erreur_n_est_pas_rejouee(self):
+        appels = []
+
+        class Completions:
+            def create(self, **kwargs):
+                appels.append(kwargs)
+                raise ValueError("quota dépassé")
+
+        class Chat:
+            completions = Completions()
+
+        class Client:
+            chat = Chat()
+
+        with self.assertRaises(ValueError):
+            self.connector.complete(
+                credentials={"api_key": "sk-x"}, model="gpt-5.6-luna", system="s",
+                messages=[llm.Message("user", "Salut")], client=Client())
+        self.assertEqual(len(appels), 1)
 
     def test_is_configured_requires_an_api_key(self):
         self.assertFalse(self.connector.is_configured({}))

@@ -196,6 +196,54 @@ class RobotApiTest(unittest.TestCase):
         self.assertEqual(body["title"], "Plan du site")
         self.assertTrue(body["url"].startswith("http"))
 
+    def _add_idle_image(self, name="Hall d'accueil"):
+        from brain.media.library import MediaLibrary
+
+        return MediaLibrary(Path(self._tmp.name)).add_bytes(
+            name, "image/png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+
+    def test_idle_image_is_served_when_hospitality_is_on(self):
+        item = self._add_idle_image()
+        self.settings.update_section("hospitality", {"active": True, "idle_media": item["id"]})
+        body = self.client.get("/api/robot/idle-image", headers=self.headers).json()
+        self.assertEqual(body["id"], item["id"])
+        self.assertEqual(body["name"], "Hall d'accueil")
+        self.assertTrue(body["url"].endswith(item["url"]))
+        self.assertTrue(body["url"].startswith("http"))
+
+    def test_idle_image_disappears_when_hospitality_is_switched_off(self):
+        # Couper l'hospitalité depuis la webapp doit rendre la tablette à son
+        # interface sans qu'on touche au robot : l'URL vide dit exactement cela.
+        item = self._add_idle_image()
+        self.settings.update_section("hospitality", {"active": True, "idle_media": item["id"]})
+        self.settings.update_section("hospitality", {"active": False})
+        self.assertEqual(
+            self.client.get("/api/robot/idle-image", headers=self.headers).json()["url"], "")
+
+    def test_idle_image_survives_a_media_deleted_behind_its_back(self):
+        from brain.media.library import MediaLibrary
+
+        item = self._add_idle_image()
+        self.settings.update_section("hospitality", {"active": True, "idle_media": item["id"]})
+        MediaLibrary(Path(self._tmp.name)).delete(item["id"])
+        self.assertEqual(
+            self.client.get("/api/robot/idle-image", headers=self.headers).json()["url"], "")
+
+    def test_idle_image_refuses_a_video(self):
+        # Une boucle vidéo tiendrait le processeur de la tablette éveillé des heures
+        # devant un hall vide ; seule une image tient ce rôle.
+        self.settings.update_section(
+            "hospitality", {"active": True, "idle_media": "inexistant"})
+        self.assertEqual(
+            self.client.get("/api/robot/idle-image", headers=self.headers).json()["url"], "")
+        from brain import hospitality
+
+        video = [{"id": "v1", "kind": "video", "name": "Clip"}]
+        self.assertIsNone(hospitality.idle_image(video, "v1"))
+
+    def test_idle_image_requires_the_pairing_token(self):
+        self.assertEqual(self.client.get("/api/robot/idle-image").status_code, 401)
+
     def test_image_rejects_an_empty_query(self):
         response = self.client.get("/api/robot/image?q=%20%20", headers=self.headers)
         self.assertEqual(response.status_code, 422)

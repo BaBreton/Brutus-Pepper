@@ -420,6 +420,44 @@
                         android:textSize="18sp" />
                 </LinearLayout>
 
+                <!-- ── Section: Position de départ ── -->
+                <LinearLayout
+                    style="@style/Card"
+                    android:layout_marginTop="16dp">
+                    <TextView style="@style/SectionTitle" android:text="Rester face à l'entrée" />
+                    <TextView
+                        style="@style/SectionHint"
+                        android:text="Pepper tourne sur lui-même en suivant les visiteurs. Sans ce réglage, il finit dos à la porte et rate la personne suivante. Quand le hall redevient calme, il se remet dans la position enregistrée ici." />
+                    <Switch
+                        android:id="@+id/returnHomeSwitch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:minHeight="56dp"
+                        android:paddingStart="10dp"
+                        android:thumbTint="@color/switch_thumb_color"
+                        android:trackTint="@color/switch_track_color"
+                        android:text="Revenir face à l'entrée entre deux visiteurs"
+                        android:textColor="@color/ink"
+                        android:textSize="18sp" />
+                    <TextView
+                        android:id="@+id/setHomeButton"
+                        style="@style/ActionControl"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        android:text="Définir la position actuelle comme position de départ"
+                        android:textSize="17sp" />
+                    <TextView
+                        android:id="@+id/homeStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/ink_2"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
                 <!-- ── Section: Reconnaissance vocale (info) ── -->
                 <LinearLayout
                     style="@style/Card"
@@ -457,6 +495,20 @@
             android:padding="48dp"
             android:textColor="@color/stage_text"
             android:textSize="64sp"
+            android:visibility="gone" />
+
+        <!-- Image d'accueil : plein cadre, sans marge et sans bande noire. Elle sert de
+             fond d'écran devant un hall, donc elle doit occuper toute la tablette ;
+             centerCrop remplit l'écran quel que soit le rapport de l'image — 16/9 sur
+             une dalle 16/10 perd quelques pixels en haut et en bas, ce qui vaut mieux
+             qu'un cadre gris autour. Distincte de sceneImage, qui montre des plans et
+             des documents : ceux-là ne doivent jamais être rognés. -->
+        <ImageView
+            android:id="@+id/idleImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Image d’accueil"
+            android:scaleType="centerCrop"
             android:visibility="gone" />
 
         <ImageView

@@ -11,6 +11,7 @@ aussi le mérite de rendre l'accroche prévisible, et de la montrer à l'opérat
 qu'un visiteur ne l'entende.
 """
 import logging
+import re
 
 from brain.connectors import llm
 from brain.prompt import clean_places
@@ -71,6 +72,56 @@ def generate(hospitality: dict, connector, credentials: dict, model: str) -> str
 
     text = _tidy(raw)
     return text or fallback(hospitality)
+
+
+VARIANTS_INSTRUCTION = (
+    "Tu proposes plusieurs phrases d'accueil pour un robot placé à l'entrée.\n"
+    "Contraintes pour CHACUNE : une salutation de bienvenue ; UNE ou DEUX phrases ; "
+    "ton chaleureux et naturel ; aucune mise en forme, aucun guillemet, aucune "
+    "numérotation ; si un lieu est indiqué, reprends son orientation mot pour mot.\n"
+    "Ne suppose ni l'identité ni l'entreprise de la personne qui arrive. "
+    "Ne récite pas de notes privées ni l'objectif du rendez-vous.\n"
+    "Réponds UNIQUEMENT par les phrases, une par ligne, sans rien d'autre."
+)
+
+MAX_VARIANTS = 6
+
+
+def variants(hospitality: dict, connector, credentials: dict, model: str,
+             seed: str = "", count: int = 4) -> list[str]:
+    """Propose plusieurs accroches, à ranger dans la réserve de l'opérateur.
+
+    Il choisit ensuite celle qui lui plaît plutôt que de subir la seule qu'un modèle
+    aurait rendue. `seed` permet de demander des variations autour d'une phrase déjà
+    écrite, ce qui est le cas courant : on tient presque la bonne formulation.
+
+    Un échec ne renvoie jamais d'exception : sans modèle joignable, l'opérateur garde
+    l'accroche composée sans lui, et la webapp le lui dit.
+    """
+    count = max(1, min(int(count), MAX_VARIANTS))
+    demande = _brief(hospitality)
+    if str(seed or "").strip():
+        demande += "\nPhrase de départ à faire varier, sans la recopier telle quelle :\n%s" % seed.strip()
+    demande += "\nPropose %d phrases différentes, une par ligne." % count
+    try:
+        raw = connector.complete(
+            credentials=credentials, model=model,
+            system=VARIANTS_INSTRUCTION, messages=[llm.Message("user", demande)],
+        )
+    except llm.LlmError as error:
+        logging.warning("variantes d'accroche non rédigées par le modèle : %s", error)
+        return []
+    except Exception:
+        logging.exception("erreur inattendue en proposant des accroches")
+        return []
+
+    propositions = []
+    for ligne in str(raw or "").splitlines():
+        # Le modèle numérote ou puce parfois malgré la consigne.
+        texte = _tidy(re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s*", "", ligne))
+        if texte and texte not in propositions:
+            propositions.append(texte)
+    return propositions[:count]
 
 
 def _brief(hospitality: dict) -> str:

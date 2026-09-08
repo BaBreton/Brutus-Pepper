@@ -20,9 +20,11 @@ L’application est déjà dans Pepper. Cette procédure concerne uniquement l�
 3. Vérifier que le dossier extrait contient au même niveau `install`, `server` et `docs`. Si `install` est caché à l’intérieur d’un second dossier, ouvrir ce second dossier pour la suite.
 4. Installer puis démarrer **Docker Desktop** sur Mac ou Windows, ou **Docker Engine + Compose** sur Linux. L’ordinateur doit rester allumé et connecté au même réseau que Pepper pendant les visites.
 5. Lancer l’installation :
+   - **Windows** : ouvrir `install`, puis double-cliquer sur `Installer-Pepper.cmd`. Cet installateur fait tout : il installe Docker Desktop s’il manque, le fait démarrer avec la session Windows pour que l’antenne reparte après un redémarrage, et autorise le port 8770 sur le réseau privé pour que la tablette puisse joindre l’ordinateur. Il pose une question avant chaque modification, et `Installer-Pepper.cmd remove` défait le tout. Sur un poste où l’on préfère ne rien laisser s’installer automatiquement, `Pepper.cmd` démarre l’antenne seule, sans toucher au pare-feu ni au démarrage.
    - **Mac** : ouvrir `install`, puis double-cliquer sur `Pepper.command`. Si macOS bloque le fichier, faire Ctrl-clic → **Ouvrir**.
-   - **Windows** : ouvrir `install`, puis double-cliquer sur `Pepper.cmd` (pas sur le fichier `.ps1`).
    - **Linux** : ouvrir un terminal dans le dossier extrait et lancer `bash install/pepper.sh setup`.
+
+   Sous Windows, deux points bloquent souvent une première installation. Si Docker Desktop demande un redémarrage — c’est fréquent, il installe WSL 2 —, redémarrer puis relancer `Installer-Pepper.cmd` : il reprend là où il s’était arrêté. Et si le réseau de l’ordinateur est classé **Public**, Windows refusera les connexions du robot quelle que soit la règle de pare-feu : passer ce réseau en **Privé** dans Paramètres → Réseau et Internet.
 6. Suivre les questions du lanceur. Il construit l’antenne localement, démarre Docker et attend que l’administration réponde. Le premier lancement peut prendre plusieurs minutes et nécessite Internet pour télécharger les composants.
 7. Quand le lanceur indique que Pepper est prêt, ouvrir l’adresse d’administration sur cet ordinateur : `http://localhost:8770/`. Noter aussi l’adresse LAN affichée : c’est celle que la tablette Pepper utilisera.
 
@@ -116,6 +118,8 @@ Dans **Préparer une visite** :
 4. Cocher **Utiliser cet accueil personnalisé**, puis cliquer sur **Enregistrer l’accueil**. Le réglage s’applique aux prochains échanges ; l’accueil spontané se règle sur la tablette.
 
 Dans **Les lieux à indiquer**, renseigner le nom du lieu et la phrase que Pepper doit dire. Choisir ensuite **Ne pas pointer**, **Pointer à gauche** ou **Pointer à droite**. Par exemple, pour « la cuisine », écrire « au fond du couloir » et choisir **Pointer à droite** : lorsqu’un visiteur demande où se trouve la cuisine, Pepper donne cette indication et pointe à droite. Les lieux existants sans côté de pointage continuent de fonctionner sans geste.
+
+Dans **L’image affichée sur la tablette**, choisir une image déposée au préalable dans **Images et vidéos**. Pepper l’affiche en plein écran tant que personne ne lui parle. Toucher l’image la retire et rend la tablette à son interface habituelle ; elle revient après une minute sans conversation ni geste sur l’écran. Choisir **Aucune image** pour laisser la tablette sur son interface. Changer d’image, ou décocher **Utiliser cet accueil personnalisé**, prend effet sur la tablette en une minute environ, sans redémarrer le robot.
 
 Pepper ne doit pas présenter une supposition comme une information sur un visiteur. Les sources sont visibles pour permettre une vérification humaine.
 

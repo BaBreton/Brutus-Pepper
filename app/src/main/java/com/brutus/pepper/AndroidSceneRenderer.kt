@@ -37,6 +37,7 @@ class AndroidSceneRenderer(
     private val overlay: FrameLayout get() = activity.findViewById(R.id.presentationOverlay)
     private val textView: TextView get() = activity.findViewById(R.id.sceneText)
     private val imageView: ImageView get() = activity.findViewById(R.id.sceneImage)
+    private val idleView: ImageView get() = activity.findViewById(R.id.idleImage)
     private val videoView: VideoView get() = activity.findViewById(R.id.sceneVideo)
     private val kioskPanel: LinearLayout get() = activity.findViewById(R.id.kioskPanel)
     private val kioskDate: TextView get() = activity.findViewById(R.id.kioskDate)
@@ -49,8 +50,9 @@ class AndroidSceneRenderer(
         videoView.setOnCompletionListener(null)
         videoView.setOnErrorListener(null)
         imageView.setImageDrawable(null)
+        idleView.setImageDrawable(null)
         textView.text = ""
-        listOf(textView, imageView, videoView, kioskPanel).forEach { it.visibility = View.GONE }
+        listOf(textView, imageView, idleView, videoView, kioskPanel).forEach { it.visibility = View.GONE }
         overlay.visibility = View.INVISIBLE
         overlay.isClickable = false
         overlay.isFocusable = false
@@ -90,6 +92,35 @@ class AndroidSceneRenderer(
             }
         }
         update.run()
+    }
+
+    /**
+     * Affiche l'image d'accueil, sans minuterie : elle reste jusqu'à ce qu'on la
+     * touche ou qu'une scène de conversation prenne sa place.
+     *
+     * Elle emprunte volontairement le même écran et la même génération que les
+     * scènes : une réponse qui veut montrer quelque chose la remplace du seul fait
+     * de s'afficher, sans que personne ait à les coordonner.
+     *
+     * [onShown] reçoit faux si l'image n'a pas pu être téléchargée — le cerveau
+     * éteint, par exemple. L'appelant s'abstient alors de la croire affichée.
+     */
+    fun showIdleImage(url: String, onShown: (Boolean) -> Unit = {}) = onUi {
+        val generation = prepare()
+        imageWorker.execute {
+            val bitmap = runCatching { loadScaledBitmap(url) }.getOrNull()
+            onUi idleResult@{
+                if (generation != renderGeneration) return@idleResult onShown(false)
+                if (bitmap == null) {
+                    Log.w(TAG, "image d'accueil illisible : $url")
+                    clear()
+                    return@idleResult onShown(false)
+                }
+                idleView.setImageBitmap(bitmap)
+                idleView.visibility = View.VISIBLE
+                onShown(true)
+            }
+        }
     }
 
     fun close() {
@@ -133,7 +164,7 @@ class AndroidSceneRenderer(
         renderGeneration += 1
         handler.removeCallbacksAndMessages(null)
         videoView.stopPlayback()
-        listOf(textView, imageView, videoView, kioskPanel).forEach { it.visibility = View.GONE }
+        listOf(textView, imageView, idleView, videoView, kioskPanel).forEach { it.visibility = View.GONE }
         overlay.visibility = View.VISIBLE
         overlay.isClickable = true
         overlay.isFocusable = true
@@ -147,6 +178,9 @@ class AndroidSceneRenderer(
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         imageStream(url) { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        // inSampleSize divise les deux côtés du même facteur : le rapport de l'image
+        // est conservé, jamais déformé. Le plafond évite seulement de décoder une
+        // photo d'appareil photo en entier dans la mémoire de la tablette.
         var sample = 1
         while (bounds.outWidth / sample > 1_920 || bounds.outHeight / sample > 1_080) sample *= 2
         val options = BitmapFactory.Options().apply { inSampleSize = sample }

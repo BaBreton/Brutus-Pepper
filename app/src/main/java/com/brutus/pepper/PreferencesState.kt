@@ -6,5 +6,11 @@ package com.brutus.pepper
  */
 data class PreferencesState(
     val autoEngage: Boolean = false,
-    val conversationMode: Boolean = false
+    val conversationMode: Boolean = false,
+    /**
+     * Pepper se remet face à l'entrée quand le hall redevient calme. Son socle
+     * tourne en suivant les visiteurs ; sans cela, la personne suivante arrive dans
+     * son dos. Activé par défaut : c'est ce qu'on attend d'un robot d'accueil.
+     */
+    val returnHome: Boolean = true
 )

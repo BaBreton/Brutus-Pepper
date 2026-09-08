@@ -8,6 +8,49 @@ connecté au même réseau que le robot.
 Pour une version plus visuelle de ce parcours, ouvrir `docs/PEPPER_CLIENT_GUIDE.html`
 depuis le ZIP ; elle fonctionne hors ligne et peut être imprimée.
 
+## 0. Windows : tout faire d'un coup
+
+Sur un poste Windows, un installateur reprend les étapes 1 à 3 de ce guide sans
+qu'on ait à les suivre une par une. Dans `install`, double-cliquez sur
+**Installer-Pepper.cmd**. Il pose une question avant chaque modification, et ne
+touche qu'à trois choses sur le poste :
+
+1. **Docker Desktop**, installé via `winget` s'il est absent, puis démarré ;
+2. **un raccourci dans votre dossier Démarrage**, pour que l'antenne reparte seule
+   après un redémarrage — sans lui, elle reste éteinte tant que personne n'ouvre
+   Docker Desktop à la main ;
+3. **une autorisation de pare-feu pour le port TCP 8770**, limitée au profil
+   « Privé », afin que la tablette de Pepper puisse joindre le poste.
+
+C'est écrit pour un ordinateur qui sert aussi à autre chose : rien d'autre n'est
+modifié, et `Installer-Pepper.cmd remove` défait ces trois points, arrête l'antenne
+et conserve les réglages, la médiathèque et Docker Desktop.
+
+| Besoin | Commande |
+|---|---|
+| Installer, ou reprendre après un redémarrage | `Installer-Pepper.cmd` |
+| Voir ce qui est en place | `Installer-Pepper.cmd status` |
+| Tout défaire | `Installer-Pepper.cmd remove` |
+| Ne pas toucher au pare-feu | `Installer-Pepper.cmd install -SkipFirewall` |
+| Ne pas toucher au démarrage automatique | `Installer-Pepper.cmd install -SkipAutoStart` |
+
+Windows demande une autorisation administrateur deux fois au plus : pour installer
+Docker Desktop et pour créer la règle de pare-feu. Le reste tourne sous votre
+session, car Docker Desktop et le dossier Démarrage appartiennent au compte ouvert.
+
+Docker Desktop exige souvent un redémarrage à sa première installation (WSL 2).
+Redémarrez, puis relancez **Installer-Pepper.cmd** : chaque étape déjà faite est
+passée. Si l'installateur signale que la virtualisation est désactivée dans le
+BIOS/UEFI, aucun logiciel ne peut y remédier : activez « Intel VT-x », « AMD-V » ou
+« SVM » dans le BIOS du poste.
+
+Si le poste affiche un réseau classé **Public**, Windows refusera les connexions du
+robot quelle que soit la règle de pare-feu. L'installateur le signale ; passez ce
+réseau en **Privé** dans Paramètres → Réseau et Internet.
+
+Les sections suivantes décrivent le même parcours pas à pas, pour Mac, Linux, ou
+pour un poste Windows où l'on préfère tout contrôler à la main.
+
 ## 1. Préparer l'ordinateur
 
 - **Mac** : Mac Intel ou Apple Silicon 64 bits avec Docker Desktop installé et ouvert.
@@ -112,8 +155,9 @@ ne change ni l'écoute du serveur ni le pare-feu. Une valeur manuelle doit appar
 Les ponts/VLAN et réseaux virtuels demandent parfois ce choix manuel.
 
 Le serveur existant expose le port TCP **8770** sur les interfaces de l'ordinateur.
-Faites autoriser ce port uniquement sur le réseau privé prévu pour Pepper. Aucun
-réglage de pare-feu n'est modifié par les scripts. Ne publiez pas ce port sur Internet.
+Faites autoriser ce port uniquement sur le réseau privé prévu pour Pepper. Sous
+Windows, `Installer-Pepper.cmd` propose de créer cette autorisation ; `Pepper.cmd`
+et les lanceurs Mac/Linux ne modifient aucun réglage de pare-feu. Ne publiez pas ce port sur Internet.
 Le trafic local HTTP transporte jetons et audio sans chiffrement : utilisez un
 réseau de confiance validé par votre responsable informatique. Un Wi-Fi invité
 avec isolation des appareils ou un VPN peut empêcher la connexion du robot.
@@ -149,7 +193,9 @@ commandes `.ps1` directes dépendent de votre stratégie locale. `--open` (Mac/L
 ou `-Open` (Windows) ouvre le navigateur sans secret dans l'adresse.
 
 Le serveur redémarre avec Docker après redémarrage de l'ordinateur, sauf si vous
-l'avez arrêté explicitement. Docker lui-même doit être lancé. `stop` n'efface rien.
+l'avez arrêté explicitement. Docker lui-même doit être lancé — c'est précisément ce
+que met en place le raccourci de démarrage créé par `Installer-Pepper.cmd` sous
+Windows. `stop` n'efface rien.
 
 ## Mise à jour et sauvegardes — avec votre installateur
 

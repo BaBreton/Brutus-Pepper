@@ -120,7 +120,11 @@ class WakeWordEngine(
                 // The microphone is RELEASED before any consumer opens the next capture.
                 callbacks.forEach { it() }
                 if (fire) onWake()
-                else if (restart) start()
+                // this@WakeWordEngine : sans le qualificateur, Kotlin résout start()
+                // vers Thread.start() de cette capture — déjà terminée — et lève
+                // IllegalThreadStateException, ce qui tuait l'application. On veut
+                // réarmer le moteur, pas relancer le fil qui vient de finir.
+                else if (restart) this@WakeWordEngine.start()
             }
         }
     }

@@ -1,14 +1,14 @@
 """Métadonnées publiques des fournisseurs et de leurs tarifs indicatifs.
 
 Les montants sont exprimés en dollars US, tels qu'affichés par les pages tarifaires
-officielles vérifiées le 6 septembre 2026. Ils servent à orienter le choix dans la
+officielles vérifiées le 7 septembre 2026. Ils servent à orienter le choix dans la
 webapp, pas à remplacer la facture du fournisseur : AWS varie selon la région et
 les plans, et les tarifs peuvent évoluer.
 """
 from dataclasses import dataclass
 
 
-PRICING_CHECKED = "2026-09-06"
+PRICING_CHECKED = "2026-09-07"
 
 
 @dataclass(frozen=True)
@@ -38,6 +38,20 @@ class Pricing:
         return result
 
 
+OPENAI_GPT_56_LUNA = Pricing(
+    "1M tokens",
+    input_usd_per_million=0.20,
+    output_usd_per_million=1.20,
+    source_url="https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+)
+OPENAI_GPT_56_TERRA = Pricing(
+    "1M tokens",
+    input_usd_per_million=2.00,
+    output_usd_per_million=12.00,
+    source_url="https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+)
+# Conservés pour les installations qui ont encore GPT-4.1 enregistré : le modèle
+# n'est plus au catalogue mais reste appelable, et son tarif doit rester juste.
 OPENAI_GPT_41_MINI = Pricing(
     "1M tokens",
     input_usd_per_million=0.40,

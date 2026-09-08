@@ -1,4 +1,6 @@
 """Endpoints consommés par la webapp d'administration. Les secrets entrent, ne sortent jamais."""
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, ValidationError
 from typing import Annotated, Literal
@@ -11,6 +13,11 @@ from brain.media import imagesearch
 from brain.media.library import MAX_UPLOAD_BYTES
 
 router = APIRouter(prefix="/api/admin")
+
+# Sortis du corps de Profile : le champ « greeting » y masque le module du même nom,
+# et toute ligne suivante lirait un FieldInfo au lieu des constantes.
+GREETING_MAX_CHARS = greeting.MAX_CHARS
+GREETING_MAX_VARIANTS = greeting.MAX_VARIANTS
 
 
 class SectionUpdate(BaseModel):
@@ -38,15 +45,44 @@ class Place(BaseModel):
     point_direction: Literal["", "left", "right"] = ""
 
 
-class HospitalityUpdate(BaseModel):
-    active: bool = False
+class Profile(BaseModel):
+    """Une fiche d'accueil : tout ce que Pepper doit savoir pour recevoir chez un hôte.
+
+    L'hôte en prépare une par entreprise ou par lieu, et bascule de l'une à l'autre
+    sans avoir à ressaisir ses consignes.
+    """
+
+    id: str = Field(default="", max_length=64)
+    label: str = Field(default="", max_length=120)
     company: str = Field(default="", max_length=160)
+    mission: str = Field(default="", max_length=500)
     visitors: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=30)
     notes: str = Field(default="", max_length=6000)
-    mission: str = Field(default="", max_length=500)
     # Plafonné : tout ce qui entre ici part dans le prompt système à chaque réponse.
     places: list[Place] = Field(default_factory=list, max_length=40)
+    idle_media: str = Field(default="", max_length=64)
+    # LA phrase prononcée. Plus de duplication entre « imposée » et « composée » :
+    # ce que l'hôte lit dans la zone de texte est ce que Pepper dit.
+    greeting: str = Field(default="", max_length=GREETING_MAX_CHARS)
+    # Réserve de propositions, pour choisir plutôt que subir.
+    greeting_pool: list[Annotated[str, Field(max_length=GREETING_MAX_CHARS)]] = Field(
+        default_factory=list, max_length=GREETING_MAX_VARIANTS)
+    greeting_point: Literal["", "left", "right"] = ""
     active_visit: hospitality.VisitProfile | None = None
+
+
+class HospitalityUpdate(BaseModel):
+    active: bool = False
+    active_profile: str = Field(default="", max_length=64)
+    profiles: list[Profile] = Field(default_factory=list, max_length=30)
+
+
+class GreetingRequest(BaseModel):
+    """Demande de propositions d'accroche pour une fiche en cours d'édition."""
+
+    profile: Profile = Field(default_factory=Profile)
+    seed: str = Field(default="", max_length=GREETING_MAX_CHARS)
+    count: int = Field(default=4, ge=1, le=GREETING_MAX_VARIANTS)
 
 
 @router.get("/connectors")
@@ -81,7 +117,7 @@ def write_connectors(body: ConnectorsUpdate, current: AppState = Depends(require
 def read_hospitality(current: AppState = Depends(require_admin)) -> dict:
     # Toujours passer par public() : aucune route ne renvoie load() brut, pour qu'un
     # champ secret ajouté ici un jour soit masqué sans qu'on ait à y repenser.
-    return current.settings.public()["hospitality"]
+    return hospitality.normalise(current.settings.public()["hospitality"])
 
 
 class SearchPreview(BaseModel):
@@ -115,30 +151,64 @@ def preview_image_content(identifier: str, current: AppState = Depends(require_a
 
 @router.put("/hospitality")
 def write_hospitality(body: HospitalityUpdate, current: AppState = Depends(require_admin)) -> dict:
-    changes = _merged_hospitality(body, current)
-    visit = changes.get("active_visit")
-    if changes["active"] and visit and (not visit["validated"] or not visit["company"]):
-        raise HTTPException(status_code=422, detail="Renseignez l’entreprise invitée et validez la fiche avant activation.")
-    # L'accroche est rédigée ici, pas quand un visiteur se présente : un appel au
-    # fournisseur coûte une à deux secondes, et laisser quelqu'un devant un robot muet
-    # le temps de la rédiger serait absurde. L'opérateur la voit donc avant de partir.
-    changes["greeting"] = (greeting.fallback(changes) if visit else _compose_greeting(current, changes)) if changes["active"] else ""
-    current.settings.update_section("hospitality", changes)
+    """Enregistre les fiches. Ce qui est enregistré est ce qui sert : il n'y a pas
+    d'état brouillon, et donc rien à valider en plus du bouton d'enregistrement."""
+    card = body.model_dump()
+    catalogue = current.media.list()
+    seen: set[str] = set()
+    for profile in card["profiles"]:
+        # Un identifiant est attribué ici, pas côté navigateur : deux onglets ouverts
+        # ne doivent pas pouvoir créer deux fiches qui se réclament la même.
+        if not profile["id"] or profile["id"] in seen:
+            profile["id"] = uuid.uuid4().hex[:12]
+        seen.add(profile["id"])
+        if not profile["label"].strip():
+            profile["label"] = profile["company"].strip() or "Fiche sans nom"
+        # Une image supprimée de la médiathèque laisserait un identifiant mort : la
+        # tablette n'afficherait rien et personne ne saurait pourquoi.
+        if profile["idle_media"] and hospitality.idle_image(catalogue, profile["idle_media"]) is None:
+            raise HTTPException(status_code=422,
+                                detail="L’image de la fiche « %s » n’est plus dans la médiathèque." % profile["label"])
+    known = {profile["id"] for profile in card["profiles"]}
+    if card["active_profile"] not in known:
+        card["active_profile"] = next(iter(profile["id"] for profile in card["profiles"]), "")
+    if card["active"] and not card["active_profile"]:
+        raise HTTPException(status_code=422, detail="Créez une fiche avant d’activer l’accueil.")
+    current.settings.update_section("hospitality", card)
     return current.settings.public()["hospitality"]
 
 
-def _merged_hospitality(body: HospitalityUpdate, current: AppState) -> dict:
-    merged = current.settings.load()["hospitality"]
-    merged.update(body.model_dump(exclude_unset=True))
+@router.post("/hospitality/greetings")
+def suggest_greetings(body: GreetingRequest, current: AppState = Depends(require_admin)) -> dict:
+    """Propose des accroches à partir de la fiche en cours d'édition.
+
+    Ne touche à rien : l'opérateur choisit dans la webapp, puis enregistre.
+    """
+    settings = current.settings.load()
+    active = settings["llm"]["active"]
+    card = body.profile.model_dump()
     try:
-        return HospitalityUpdate.model_validate(merged).model_dump()
-    except ValidationError:
-        raise HTTPException(status_code=422, detail="La fiche dépasse les limites autorisées. Vérifiez les champs saisis.") from None
+        connector = llm.get(active) if active else None
+    except KeyError:
+        connector = None
+    if connector is None:
+        # Sans modèle configuré, on rend au moins l'accroche composée sans lui : mieux
+        # vaut une phrase plate à retoucher qu'une zone de texte vide.
+        return {"greetings": [greeting.fallback(card)], "generated": False}
+    propositions = greeting.variants(
+        card, connector,
+        credentials=settings["llm"]["credentials"].get(active) or {},
+        model=settings["llm"]["model"], seed=body.seed, count=body.count)
+    if not propositions:
+        return {"greetings": [greeting.fallback(card)], "generated": False}
+    return {"greetings": propositions, "generated": True}
 
 
 @router.post("/hospitality/preview")
-def preview_hospitality(body: HospitalityUpdate, current: AppState = Depends(require_admin)) -> dict:
-    return {"greeting": greeting.fallback(_merged_hospitality(body, current))}
+def preview_hospitality(body: GreetingRequest, current: AppState = Depends(require_admin)) -> dict:
+    """Ce que Pepper dirait avec cette fiche, sans appeler le fournisseur."""
+    card = body.profile.model_dump()
+    return {"greeting": str(card.get("greeting") or "").strip() or greeting.fallback(card)}
 
 
 @router.post("/hospitality/research")
@@ -152,24 +222,6 @@ def research_hospitality(body: hospitality.ResearchRequest,
         raise HTTPException(status_code=502, detail="Clé du fournisseur de recherche refusée. Vérifiez-la dans Voix et intelligence.") from None
     except websearch.WebSearchError:
         raise HTTPException(status_code=502, detail="Recherche indisponible. Réessayez ou remplissez la fiche manuellement.") from None
-
-
-def _compose_greeting(current: AppState, hospitality: dict) -> str:
-    settings = current.settings.load()
-    active = settings["llm"]["active"]
-    try:
-        connector = llm.get(active) if active else None
-    except KeyError:
-        connector = None
-    if connector is None:
-        # Aucun LLM configuré : l'hospitalité s'active quand même, avec l'accroche
-        # composée sans modèle.
-        return greeting.fallback(hospitality)
-    return greeting.generate(
-        hospitality, connector,
-        credentials=settings["llm"]["credentials"].get(active) or {},
-        model=settings["llm"]["model"],
-    )
 
 
 @router.get("/media")

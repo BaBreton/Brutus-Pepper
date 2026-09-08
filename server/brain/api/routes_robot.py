@@ -83,10 +83,39 @@ def greeting(current: AppState = Depends(require_robot)) -> dict:
     été rédigée à l'enregistrement des réglages, on ne fait que la relire. `active` à
     faux signifie « reprends ton accueil habituel », et non « je n'ai rien à dire ».
     """
-    hospitality = current.settings.load()["hospitality"]
-    if not hospitality.get("active"):
-        return {"active": False, "speech": ""}
-    return {"active": True, "speech": str(hospitality.get("greeting", "")).strip()}
+    card = hospitality.active_card(current.settings.load()["hospitality"])
+    if not card.get("active"):
+        return {"active": False, "speech": "", "actions": []}
+    # Ce que l'hôte a écrit dans la zone de texte, mot pour mot. Le serveur ne rédige
+    # plus au dernier moment : il relit.
+    speech = str(card.get("greeting", "")).strip()
+    # Un côté choisi explicitement l'emporte : l'opérateur qui écrit « l'accueil est
+    # sur votre gauche » sans nommer un lieu déclaré doit pouvoir obtenir le geste.
+    # Sinon on déduit du lieu que l'accroche nomme — la phrase réellement prononcée,
+    # imposée ou rédigée, pas la fiche.
+    direction = str(card.get("greeting_point", "")).strip().lower()
+    if direction not in ("left", "right"):
+        place = hospitality.place_named_in(speech, card.get("places"))
+        direction = str(place["point_direction"]).strip().lower() if place else ""
+    actions = [{"name": "point_" + direction, "arguments": {}}] if direction else []
+    return {"active": True, "speech": speech, "actions": actions}
+
+
+@router.get("/idle-image")
+def idle_image(request: Request, current: AppState = Depends(require_robot)) -> dict:
+    """L'image que la tablette affiche en boucle tant que personne ne parle à Pepper.
+
+    Interrogée régulièrement par la tablette : changer l'image — ou couper
+    l'hospitalité — depuis la webapp doit se voir sans redémarrer le robot. Une URL
+    vide veut dire « rends la tablette à son interface », pas « garde la précédente ».
+    """
+    card = hospitality.active_card(current.settings.load()["hospitality"])
+    item = hospitality.idle_image(current.media.list(), card.get("idle_media", "")) \
+        if card.get("active") else None
+    if item is None:
+        return {"id": "", "url": "", "name": ""}
+    base = str(request.base_url).rstrip("/")
+    return {"id": item["id"], "url": base + item["url"], "name": item["name"]}
 
 
 @router.post("/chat")
@@ -102,9 +131,10 @@ async def chat(body: ChatRequest, current: AppState = Depends(require_robot)) ->
             status_code=503, detail="connecteur LLM « %s » inconnu" % active) from None
 
     searcher, search_credentials = _web_search(settings)
+    card = hospitality.active_card(settings["hospitality"])
     system = prompt.build_system_prompt(
         catalog=current.media.list(),
-        hospitality=settings["hospitality"],
+        hospitality=card,
         can_search=searcher is not None,
     )
     credentials = settings["llm"]["credentials"].get(active) or {}
@@ -142,8 +172,8 @@ async def chat(body: ChatRequest, current: AppState = Depends(require_robot)) ->
         "",
     )
     text = hospitality.add_pointing_action(
-        text, latest_user_text, settings["hospitality"].get("places", []),
-        active=bool(settings["hospitality"].get("active")),
+        text, latest_user_text, card.get("places") or [],
+        active=bool(card.get("active")),
     )
     return {"response": text}
 

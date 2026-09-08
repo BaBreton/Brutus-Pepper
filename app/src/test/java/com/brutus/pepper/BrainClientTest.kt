@@ -88,6 +88,54 @@ class BrainClientTest {
     }
 
     @Test
+    fun `l'accroche porte le geste de pointage choisi par le cerveau`() {
+        val greeting = BrainClient.parseGreeting(
+            """{"active":true,"speech":"Bienvenue ! La salle du conseil vous attend.",
+                 "actions":[{"name":"point_right","arguments":{}}]}""")
+        assertTrue(greeting.isUsable)
+        assertEquals(listOf(PointRightAction), greeting.actions)
+    }
+
+    @Test
+    fun `une accroche sans geste reste utilisable`() {
+        val greeting = BrainClient.parseGreeting("""{"active":true,"speech":"Bonjour !","actions":[]}""")
+        assertTrue(greeting.isUsable)
+        assertTrue(greeting.actions.isEmpty())
+        // Un cerveau plus ancien ne renvoie pas du tout le champ.
+        assertTrue(BrainClient.parseGreeting("""{"active":true,"speech":"Bonjour !"}""").actions.isEmpty())
+    }
+
+    @Test
+    fun `un geste inconnu est ignore plutot que de rendre l'accueil muet`() {
+        val greeting = BrainClient.parseGreeting(
+            """{"active":true,"speech":"Bonjour !",
+                 "actions":[{"name":"danser"},{"name":"point_left"}]}""")
+        assertEquals(listOf(PointLeftAction), greeting.actions)
+        assertEquals("Bonjour !", greeting.speech)
+    }
+
+    @Test
+    fun `l'image d'accueil est lue depuis le cerveau`() {
+        val (recorder, brain) = client(HttpResult(200,
+            """{"id":"a1b2","url":"http://antenna.local:8770/api/robot/media/a1b2/content","name":"Hall"}"""))
+        var image: IdleImage? = null
+        brain.idleImage { image = it.getOrThrow() }
+        Thread.sleep(120)
+        assertEquals("a1b2", image?.id)
+        assertEquals("Hall", image?.name)
+        assertTrue(image?.isUsable == true)
+        assertEquals("http://antenna.local:8770/api/robot/idle-image", recorder.calls.single().second)
+        assertEquals("jeton-appairage", recorder.calls.single().third)
+    }
+
+    @Test
+    fun `une image d'accueil absente rend la tablette a son interface`() {
+        assertFalse(BrainClient.parseIdleImage("""{"id":"","url":"","name":""}""").isUsable)
+        // Le cerveau peut aussi n'annoncer aucun champ : même conclusion.
+        assertFalse(BrainClient.parseIdleImage("{}").isUsable)
+    }
+
+    @Test
     fun `une accroche vide malgre l'hospitalite active n'est pas utilisable`() {
         // Réglages écrits à la main, ou rédaction qui a échoué : la tablette retombe
         // sur ses formules plutôt que de laisser un visiteur sans bonjour.

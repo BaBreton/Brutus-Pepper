@@ -228,26 +228,192 @@ function applySettings(body) {
   fillProviders('image_search', body.image_search_available, body.settings.image_search);
 }
 
-// ── Hospitalité ────────────────────────────────────────────────────────────
+// ── Fiches d'accueil ───────────────────────────────────────────────────────
+// Les fiches vivent en mémoire pendant l'édition et partent toutes ensemble à
+// l'enregistrement. Il n'y a pas d'état brouillon : ce qui est enregistré est ce que
+// Pepper utilise.
+let profiles = [];
+let currentProfileId = '';
+
+function currentProfile() {
+  return profiles.find(p => p.id === currentProfileId) || null;
+}
+
+function blankProfile(label) {
+  return {id: '', label: label || '', company: '', mission: '', visitors: [], notes: '',
+          places: [], idle_media: '', greeting: '', greeting_pool: [],
+          greeting_point: '', active_visit: null};
+}
+
 async function loadHospitality() {
   const body = await api('/api/admin/hospitality');
+  profiles = (body.profiles || []).map(p => Object.assign(blankProfile(), p));
+  if (!profiles.length) profiles = [blankProfile('Ma fiche')];
+  currentProfileId = body.active_profile || profiles[0].id;
+  if (!profiles.some(p => p.id === currentProfileId)) currentProfileId = profiles[0].id;
   $('hospitalityActive').checked = !!body.active;
-  $('company').value = body.company || '';
-  $('visitors').value = (body.visitors || []).join('\n');
-  $('notes').value = body.notes || '';
-  $('mission').value = body.mission || '';
-  renderPlaces(body.places || []);
-  const visit = body.active_visit || {};
+  renderProfileSelect();
+  await showProfile();
+}
+
+function renderProfileSelect() {
+  const select = $('profileSelect');
+  select.replaceChildren();
+  profiles.forEach((profile, index) => {
+    const option = document.createElement('option');
+    // Une fiche jamais enregistrée n'a pas encore d'identifiant : on la repère par
+    // son rang, le serveur lui en attribuera un.
+    option.value = profile.id || ('#' + index);
+    option.textContent = profile.label || profile.company || 'Fiche sans nom';
+    select.append(option);
+  });
+  const chosen = profiles.findIndex(p => p.id === currentProfileId);
+  select.selectedIndex = chosen >= 0 ? chosen : 0;
+  $('deleteProfile').disabled = profiles.length <= 1;
+}
+
+/** Recopie le formulaire dans la fiche en mémoire, sans rien envoyer. */
+function stashProfile() {
+  const profile = currentProfile();
+  if (!profile) return;
+  profile.label = $('profileLabel').value.trim();
+  profile.company = $('company').value.trim();
+  profile.mission = $('mission').value.trim();
+  profile.visitors = $('visitors').value.split('\n').map(v => v.trim()).filter(Boolean);
+  profile.notes = $('notes').value.trim();
+  profile.places = readPlaces();
+  profile.idle_media = $('idleMedia').value;
+  profile.greeting = $('greetingText').value.trim();
+  profile.greeting_point = $('greetingPoint').value;
+  profile.active_visit = readVisit();
+}
+
+async function showProfile() {
+  const profile = currentProfile() || blankProfile();
+  $('profileLabel').value = profile.label || '';
+  $('company').value = profile.company || '';
+  $('mission').value = profile.mission || '';
+  $('visitors').value = (profile.visitors || []).join('\n');
+  $('notes').value = profile.notes || '';
+  renderPlaces(profile.places || []);
+  $('greetingText').value = profile.greeting || '';
+  $('greetingPoint').value = profile.greeting_point || '';
+  renderGreetingPool(profile.greeting_pool || []);
+  const visit = profile.active_visit || {};
   $('visitCompany').value = visit.company || '';
   $('visitDomain').value = visit.domain || '';
   $('visitVisitors').value = (visit.visitors || []).join('\n');
   $('visitObjective').value = visit.objective || '';
   $('visitBrief').value = visit.brief || '';
-  $('visitValidated').checked = !!visit.validated;
   visitSources = visit.sources || [];
   renderVisitSources();
-  showGreeting(body);
+  await fillIdleMediaChoices(profile.idle_media || '');
 }
+
+$('profileSelect').onchange = async () => {
+  stashProfile();
+  const index = $('profileSelect').selectedIndex;
+  currentProfileId = profiles[index] ? profiles[index].id : '';
+  if (!currentProfileId && profiles[index]) currentProfileId = profiles[index].id = 'brouillon-' + index;
+  await showProfile();
+};
+
+$('profileLabel').addEventListener('input', () => {
+  const profile = currentProfile();
+  if (!profile) return;
+  profile.label = $('profileLabel').value;
+  renderProfileSelect();
+});
+
+$('newProfile').onclick = async () => {
+  stashProfile();
+  const profile = blankProfile('Nouvelle fiche');
+  profile.id = 'brouillon-' + Date.now();
+  profiles.push(profile);
+  currentProfileId = profile.id;
+  renderProfileSelect();
+  await showProfile();
+  say('hospitalityStatus', 'Fiche créée. Renseignez-la puis enregistrez.');
+};
+
+$('duplicateProfile').onclick = async () => {
+  stashProfile();
+  const source = currentProfile();
+  if (!source) return;
+  const copie = JSON.parse(JSON.stringify(source));
+  copie.id = 'brouillon-' + Date.now();
+  copie.label = (source.label || 'Fiche') + ' (copie)';
+  profiles.push(copie);
+  currentProfileId = copie.id;
+  renderProfileSelect();
+  await showProfile();
+  say('hospitalityStatus', 'Fiche dupliquée.');
+};
+
+$('deleteProfile').onclick = async () => {
+  const profile = currentProfile();
+  if (!profile || profiles.length <= 1) return;
+  if (!confirm(`Supprimer la fiche « ${profile.label || 'sans nom'} » ?`)) return;
+  profiles = profiles.filter(p => p.id !== profile.id);
+  currentProfileId = profiles[0].id;
+  renderProfileSelect();
+  await showProfile();
+  say('hospitalityStatus', 'Fiche supprimée. Enregistrez pour confirmer.');
+};
+
+// ── La phrase d'accueil ────────────────────────────────────────────────────
+// Pepper prononce exactement ce qu'il y a dans la zone de texte. Les boutons ne
+// font qu'écrire dedans : rien n'est dit que l'hôte n'ait lu.
+
+function renderGreetingPool(pool) {
+  const box = $('greetingPool');
+  box.replaceChildren();
+  (pool || []).forEach(phrase => {
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.textContent = phrase;
+    bouton.title = 'Utiliser cette phrase';
+    bouton.onclick = () => {
+      $('greetingText').value = phrase;
+      say('greetingStatus', 'Phrase reprise. Modifiez-la si besoin, puis enregistrez.');
+    };
+    box.append(bouton);
+  });
+}
+
+async function proposeGreetings(seed, count) {
+  stashProfile();
+  const profile = currentProfile();
+  const boutons = [$('suggestGreeting'), $('varyGreeting')];
+  boutons.forEach(b => { b.disabled = true; });
+  say('greetingStatus', 'Rédaction en cours…');
+  try {
+    const body = await api('/api/admin/hospitality/greetings', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile, seed: seed || '', count}),
+    });
+    profile.greeting_pool = body.greetings || [];
+    renderGreetingPool(profile.greeting_pool);
+    if (!profile.greeting_pool.length) {
+      say('greetingStatus', 'Aucune proposition. Écrivez la phrase vous-même.', 'warn');
+    } else if (!body.generated) {
+      say('greetingStatus', 'Aucun modèle joignable : voici une phrase composée sans lui.', 'warn');
+    } else {
+      say('greetingStatus', 'Touchez une proposition pour la placer dans la zone de texte.');
+    }
+  } catch (error) {
+    say('greetingStatus', error.message, 'error');
+  } finally {
+    boutons.forEach(b => { b.disabled = false; });
+  }
+}
+
+$('suggestGreeting').onclick = () => proposeGreetings('', 1);
+$('varyGreeting').onclick = () => {
+  const depart = $('greetingText').value.trim();
+  if (!depart) return proposeGreetings('', 4);
+  return proposeGreetings(depart, 4);
+};
 
 // Une ligne vide en permanence : l'opérateur n'a pas à cliquer « Ajouter » pour saisir
 // son premier lieu, et les lignes laissées vides sont ignorées à l'enregistrement.
@@ -309,31 +475,75 @@ function readPlaces() {
     .filter(place => place.name && place.directions);
 }
 
-function showGreeting(body) {
-  const speech = (body.greeting || '').trim();
-  $('greetingPreview').hidden = !(body.active && speech);
-  $('greetingText').textContent = speech;
+/**
+ * Les images d'accueil viennent de la médiathèque : c'est là que le client dépose
+ * ses fichiers, et l'accueil n'a pas à en tenir une copie séparée.
+ */
+async function fillIdleMediaChoices(selected) {
+  const select = $('idleMedia');
+  let images = [];
+  try {
+    images = (await api('/api/admin/media')).items.filter(item => item.kind === 'image');
+  } catch (error) {
+    say('hospitalityStatus', error.message, 'error');
+  }
+  select.replaceChildren();
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = images.length
+    ? 'Aucune image — interface habituelle'
+    : 'Aucune image dans la médiathèque';
+  select.append(none);
+  for (const item of images) {
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = item.name;
+    select.append(option);
+  }
+  select.value = images.some(item => item.id === selected) ? selected : '';
+  await showIdleMediaPreview(select.value);
 }
 
+// Aperçu tenu à part de ceux de la médiathèque : celle-ci révoque tous ses blobs à
+// chaque rechargement, ce qui viderait cette vignette-ci sans qu'on l'ait demandé.
+let idlePreviewUrl = null;
+
+async function showIdleMediaPreview(mediaId) {
+  const box = $('idleMediaPreview');
+  if (idlePreviewUrl) { URL.revokeObjectURL(idlePreviewUrl); idlePreviewUrl = null; }
+  if (mediaId) {
+    const response = await fetch('/api/admin/media/' + mediaId + '/content',
+                                 { headers: { 'Authorization': 'Bearer ' + token } })
+      .catch(() => null);
+    if (response && response.ok) idlePreviewUrl = URL.createObjectURL(await response.blob());
+  }
+  box.hidden = !idlePreviewUrl;
+  if (idlePreviewUrl) $('idleMediaImage').src = idlePreviewUrl;
+}
+
+$('idleMedia').onchange = () => showIdleMediaPreview($('idleMedia').value);
+
 async function saveHospitality() {
+  stashProfile();
   try {
     const body = await api('/api/admin/hospitality', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         active: $('hospitalityActive').checked,
-        company: $('company').value.trim(),
-        visitors: $('visitors').value.split('\n').map(v => v.trim()).filter(Boolean),
-        notes: $('notes').value.trim(),
-        mission: $('mission').value.trim(),
-        places: readPlaces(),
-        active_visit: readVisit(),
+        active_profile: currentProfileId,
+        // Les identifiants provisoires « brouillon-… » sont remplacés par le serveur.
+        profiles: profiles.map(p => Object.assign({}, p,
+          {id: String(p.id || '').startsWith('brouillon-') ? '' : p.id})),
       }),
     });
-    showGreeting(body);
+    profiles = (body.profiles || []).map(p => Object.assign(blankProfile(), p));
+    currentProfileId = body.active_profile || (profiles[0] && profiles[0].id) || '';
+    renderProfileSelect();
+    await showProfile();
     say('hospitalityStatus', body.active
-      ? 'Accueil personnalisé enregistré pour les prochains échanges. L’accueil spontané se règle sur la tablette.'
-      : 'Accueil personnalisé désactivé. Votre fiche est conservée.');
+      ? 'Enregistré. Pepper accueille avec cette fiche dès le prochain visiteur.'
+      : 'Enregistré. L’accueil personnalisé est désactivé ; vos fiches sont conservées.');
   } catch (error) {
     say('hospitalityStatus', error.message, 'error');
   }
@@ -433,7 +643,12 @@ async function loadMedia() {
       remove.textContent = 'Supprimer';
       remove.onclick = async () => {
         if (!confirm(`Supprimer « ${item.name} » ?`)) return;
-        try { await api('/api/admin/media/' + item.id, { method: 'DELETE' }); loadMedia(); }
+        try {
+          await api('/api/admin/media/' + item.id, { method: 'DELETE' });
+          loadMedia();
+          // L'accueil peut désigner ce média : sa liste doit suivre la suppression.
+          fillIdleMediaChoices($('idleMedia').value);
+        }
         catch (error) { say('uploadStatus', error.message, 'error'); }
       };
       row.append(remove);
@@ -455,6 +670,7 @@ async function upload() {
     $('mediaName').value = ''; $('mediaFile').value = '';
     say('uploadStatus', 'Média ajouté');
     loadMedia();
+    fillIdleMediaChoices($('idleMedia').value);
   } catch (error) {
     say('uploadStatus', error.message, 'error');
   }
@@ -545,7 +761,7 @@ function readVisit() {
   return {company, domain: $('visitDomain').value.trim(),
     visitors: $('visitVisitors').value.split('\n').map(v => v.trim()).filter(Boolean),
     objective: $('visitObjective').value.trim(), brief: $('visitBrief').value.trim(),
-    sources: visitSources, validated: $('visitValidated').checked};
+    sources: visitSources};
 }
 function renderVisitSources() {
   $('visitSources').replaceChildren();
@@ -571,7 +787,6 @@ async function researchVisit() {
       return say('researchStatus', 'La sélection a changé. Relancez la recherche.', 'warn');
     }
     $('visitBrief').value = body.draft || '';
-    $('visitValidated').checked = false;
     visitSources = (body.sources || []).map(s => s.url);
     renderVisitSources();
     say('researchStatus', [...body.warnings, ...body.unknowns].join(' '), 'warn');
@@ -580,17 +795,6 @@ async function researchVisit() {
 }
 $('researchVisit').onclick = researchVisit;
 document.querySelectorAll('[data-page]').forEach(button => button.onclick = () => showPage(button.dataset.page));
-['visitCompany', 'visitDomain', 'visitVisitors', 'visitObjective', 'visitBrief'].forEach(id => {
-  $(id).addEventListener('input', () => { $('visitValidated').checked = false; });
-});
-$('previewVisit').onclick = async () => {
-  try {
-    const body = await api('/api/admin/hospitality/preview', {method:'POST',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-        company:$('company').value.trim(), active_visit:readVisit(), visitors:$('visitors').value.split('\n').filter(Boolean)})});
-    $('greetingPreview').hidden = false; $('greetingText').textContent = body.greeting;
-  } catch(error) { say('hospitalityStatus', error.message, 'error'); }
-};
 
 health();
 document.body.classList.add('locked');

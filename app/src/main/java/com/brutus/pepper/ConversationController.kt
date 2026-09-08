@@ -213,6 +213,12 @@ class ConversationController(
         }
     }
 
+    /**
+     * Le hall est resté calme : la personne suivante ne doit pas avoir à connaître le
+     * mot d'éveil parce que la précédente a dit « au revoir ».
+     */
+    fun releaseExplicitWake() = dispatch { awaitingExplicitWake = false }
+
     /** Called immediately before the speech gateway starts, not after it finishes. */
     fun onSpeechStarted() = dispatch {
         if (active && !suspended && state == State.THINKING) state = State.SPEAKING

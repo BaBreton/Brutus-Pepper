@@ -10,6 +10,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# La console Windows n'est pas en UTF-8 par défaut : sans cela, les accents des
+# messages arrivent illisibles chez le client. Échoue sans bruit là où c'est refusé.
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
+
 function Test-LanIp([string]$Address) {
     if ($Address -notmatch '^([0-9]{1,3}\.){3}[0-9]{1,3}$') { return $false }
     $parts = $Address.Split('.')
@@ -20,14 +24,41 @@ function Test-LanIp([string]$Address) {
         $parts[0] -ne '127' -and -not ($parts[0] -eq '169' -and $parts[1] -eq '254'))
 }
 
+<#
+    Exécute une commande native sans que son flux d'erreur ne fasse échouer le script.
+
+    Sous $ErrorActionPreference = 'Stop', PowerShell 5.1 transforme toute écriture
+    sur stderr en exception — y compris redirigée par 2>$null. Or « docker inspect »
+    sur un conteneur encore absent écrit sur stderr : c'est le cas normal d'une
+    première installation, qui mourrait ici au lieu de répondre « pas encore là ».
+    On rend donc le code de sortie et la sortie standard, et rien ne lève.
+#>
+function Invoke-Native([string]$FilePath, [string[]]$ArgumentList) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & $FilePath @ArgumentList 2>$null
+        return [pscustomobject]@{
+            ExitCode = $LASTEXITCODE
+            Output   = (@($output) -join "`n").Trim()
+        }
+    } finally { $ErrorActionPreference = $previous }
+}
+
 function Invoke-Compose([string[]]$DockerArguments) {
-    & $script:Docker @script:ComposeArgs @DockerArguments
-    if ($LASTEXITCODE -ne 0) { throw 'Commande Docker échouée. Vérifiez Docker, Internet, l’espace disque et le port 8770. Aucun volume supprimé.' }
+    # La sortie reste visible — une construction d'image dure des minutes et
+    # l'installateur doit la voir avancer — mais docker écrit sa progression sur
+    # stderr : sans ce relâchement, le premier octet de progression tuerait le script.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $script:Docker @script:ComposeArgs @DockerArguments }
+    finally { $ErrorActionPreference = $previous }
+    if ($LASTEXITCODE -ne 0) { throw "Commande Docker échouée. Vérifiez Docker, Internet, l’espace disque et le port 8770. Aucun volume supprimé." }
 }
 
 function Test-Health {
-    $state = & $script:Docker inspect --format '{{.State.Health.Status}}' pepper-brain 2>$null
-    if ($LASTEXITCODE -ne 0 -or $state -ne 'healthy') { return $false }
+    $state = Invoke-Native $script:Docker @('inspect', '--format', '{{.State.Health.Status}}', 'pepper-brain')
+    if ($state.ExitCode -ne 0 -or $state.Output -ne 'healthy') { return $false }
     # Bypass system proxies for localhost; a proxy response cannot mark Pepper ready.
     $request = [System.Net.HttpWebRequest]::Create('http://127.0.0.1:8770/api/health')
     $request.Proxy = $null
@@ -129,24 +160,32 @@ try {
         (Test-Path variable:PSSenderInfo) -or $env:SESSIONNAME -like 'RDP*')) {
         throw 'setup exige une console interactive locale, sans redirection ni session distante. Utilisez start sans jeton.'
     }
-    $command = Get-Command docker -CommandType Application -ErrorAction SilentlyContinue
+    # Select-Object -First 1 : sur Windows, le PATH de Docker Desktop contient à la
+    # fois « docker.exe » et un « docker » sans extension. Sans ce filtre, .Source
+    # renvoie deux chemins et l'appel tente de lancer une commande qui n'existe pas.
+    $command = @(Get-Command docker -CommandType Application -ErrorAction SilentlyContinue) |
+        Select-Object -First 1
     if (-not $command) { throw 'Docker absent. Installez Docker Desktop, ouvrez-le puis relancez Pepper.cmd.' }
     $script:Docker = $command.Source
     if ($env:DOCKER_CONTEXT -or -not $env:DOCKER_HOST) {
-        $endpoint = & $script:Docker context inspect --format '{{.Endpoints.docker.Host}}' 2>$null
-        if ($LASTEXITCODE -ne 0) { throw 'Contexte Docker introuvable. Sélectionnez un contexte Docker Desktop local.' }
+        $context = Invoke-Native $script:Docker @('context', 'inspect', '--format', '{{.Endpoints.docker.Host}}')
+        if ($context.ExitCode -ne 0) { throw 'Contexte Docker introuvable. Sélectionnez un contexte Docker Desktop local.' }
+        $endpoint = $context.Output
     } else { $endpoint = $env:DOCKER_HOST }
     if ($endpoint -notlike 'npipe:////./pipe/*') { throw 'Le contexte Docker doit être local (Docker Desktop, canal nommé Windows). Aucun moteur distant ou TCP accepté.' }
-    $engine = & $script:Docker info --format '{{.OSType}}/{{.Architecture}}' 2>$null
-    if ($LASTEXITCODE -ne 0) { throw 'Docker ne répond pas. Ouvrez Docker Desktop et attendez son démarrage.' }
-    if ($engine -notmatch '^linux/(amd64|x86_64|arm64|aarch64)$') { throw 'Passez Docker Desktop en mode conteneurs Linux 64 bits.' }
-    & $script:Docker compose version *> $null
-    if ($LASTEXITCODE -ne 0) { throw 'Docker Compose manque. Mettez Docker Desktop à jour.' }
+    $engine = Invoke-Native $script:Docker @('info', '--format', '{{.OSType}}/{{.Architecture}}')
+    if ($engine.ExitCode -ne 0) { throw 'Docker ne répond pas. Ouvrez Docker Desktop et attendez son démarrage.' }
+    if ($engine.Output -notmatch '^linux/(amd64|x86_64|arm64|aarch64)$') { throw 'Passez Docker Desktop en mode conteneurs Linux 64 bits.' }
+    if ((Invoke-Native $script:Docker @('compose', 'version')).ExitCode -ne 0) {
+        throw 'Docker Compose manque. Mettez Docker Desktop à jour.'
+    }
     $brain = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../server/brain')).Path
     $script:ComposeArgs = @('compose', '--project-directory', $brain, '--env-file',
         (Join-Path $PSScriptRoot 'compose.env'), '--project-name', 'brain', '--file', (Join-Path $brain 'docker-compose.yml'))
-    $owner = & $script:Docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' pepper-brain 2>$null
-    if ($LASTEXITCODE -eq 0 -and $owner -ne 'brain') { throw 'Le conteneur pepper-brain appartient à une autre installation. Faites vérifier son projet et ses volumes par le support.' }
+    # Conteneur absent : première installation, rien à vérifier. Présent mais rattaché
+    # à un autre projet Compose : on refuse plutôt que d'écraser une autre installation.
+    $owner = Invoke-Native $script:Docker @('inspect', '--format', '{{index .Config.Labels "com.docker.compose.project"}}', 'pepper-brain')
+    if ($owner.ExitCode -eq 0 -and $owner.Output -ne 'brain') { throw 'Le conteneur pepper-brain appartient à une autre installation. Faites vérifier son projet et ses volumes par le support.' }
     switch ($Action) {
         'check' { Write-Host 'Docker local Linux et Compose disponibles. Aucun conteneur modifié.'; exit 0 }
         'stop' { Invoke-Compose @('stop', 'brain'); Write-Host 'Pepper arrêté. Données et modèles conservés.'; exit 0 }
@@ -176,7 +215,7 @@ try {
     Show-Addresses
     if ($Action -eq 'setup') {
         Show-AdminToken
-        if (-not $Open) { $Open = (Read-Host 'Ouvrir l’administration dans le navigateur ? [o/N]') -eq 'o' }
+        if (-not $Open) { $Open = (Read-Host "Ouvrir l’administration dans le navigateur ? [o/N]") -eq 'o' }
     }
     if ($Open) {
         try { Start-Process 'http://localhost:8770/' }

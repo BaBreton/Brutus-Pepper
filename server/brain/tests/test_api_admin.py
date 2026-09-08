@@ -77,8 +77,10 @@ class AdminApiTest(unittest.TestCase):
         llm = {entry["id"]: entry for entry in body["llm_available"]}
         self.assertEqual([field["id"] for field in llm["bedrock"]["credential_fields"]],
                          ["access_key", "secret_key", "region"])
+        # GPT-5.6 Luna, premier du catalogue OpenAI : tarif du 7 septembre 2026.
+        self.assertEqual(llm["openai"]["models"][0]["id"], "gpt-5.6-luna")
         self.assertEqual(llm["openai"]["models"][0]["pricing"]["input_usd_per_million"],
-                         0.4)
+                         0.2)
         self.assertEqual(llm["anthropic"]["models"][0]["pricing"]["output_usd_per_million"],
                          5.0)
 
@@ -136,11 +138,15 @@ class AdminApiTest(unittest.TestCase):
         self.client.put(
             "/api/admin/hospitality",
             headers=self.headers,
-            json={"company": "Recepta", "visitors": ["Jean Dupont"], "notes": "Réunion 15h"},
+            json={"active": False, "profiles": [{
+                "label": "Recepta", "company": "Recepta",
+                "visitors": ["Jean Dupont"], "notes": "Réunion 15h"}]},
         )
         body = self.client.get("/api/admin/hospitality", headers=self.headers).json()
-        self.assertEqual(body["company"], "Recepta")
-        self.assertEqual(body["visitors"], ["Jean Dupont"])
+        fiche = body["profiles"][0]
+        self.assertEqual(fiche["company"], "Recepta")
+        self.assertEqual(fiche["visitors"], ["Jean Dupont"])
+        self.assertEqual(body["active_profile"], fiche["id"])
 
     def test_media_upload_list_and_delete(self):
         png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
@@ -221,9 +227,10 @@ class AdminApiTest(unittest.TestCase):
         self.client.put(
             "/api/admin/hospitality",
             headers=self.headers,
-            json={"active": True, "company": "Recepta", "visitors": ["Jean Dupont"],
-                  "notes": "", "mission": "envoie-les vers la cuisine",
-                  "places": [{"name": "cuisine", "directions": "au fond à votre droite"}]},
+            json={"active": True, "profiles": [{
+                "label": "Recepta", "company": "Recepta", "visitors": ["Jean Dupont"],
+                "notes": "", "mission": "envoie-les vers la cuisine",
+                "places": [{"name": "cuisine", "directions": "au fond à votre droite"}]}]},
         )
         built = self._built_prompt()
         self.assertIn("Recepta", built)
@@ -235,19 +242,28 @@ class AdminApiTest(unittest.TestCase):
         from brain import prompt
         from brain.settings import SettingsStore
 
+        from brain import hospitality as h
+
         return prompt.build_system_prompt(
             catalog=[],
-            hospitality=SettingsStore(Path(self._tmp.name)).load()["hospitality"],
+            hospitality=h.active_card(SettingsStore(Path(self._tmp.name)).load()["hospitality"]),
         )
 
-    def _put_hospitality(self, **fields) -> dict:
-        body = {"active": True, "company": "Recepta",
-                "mission": "accueille les clients et envoie-les vers la cuisine",
-                "places": [{"name": "cuisine", "directions": "au fond à votre droite"}]}
-        body.update(fields)
-        response = self.client.put("/api/admin/hospitality", headers=self.headers, json=body)
+    def _put_hospitality(self, active=True, **fields) -> dict:
+        fiche = {"label": "Recepta", "company": "Recepta",
+                 "mission": "accueille les clients et envoie-les vers la cuisine",
+                 "greeting": "Bienvenue chez Recepta ! La cuisine est au fond à votre droite.",
+                 "places": [{"name": "cuisine", "directions": "au fond à votre droite"}]}
+        fiche.update(fields)
+        response = self.client.put("/api/admin/hospitality", headers=self.headers,
+                                   json={"active": active, "profiles": [fiche]})
         self.assertEqual(response.status_code, 200, response.text)
-        return response.json()
+        return response.json()["profiles"][0]
+
+    def _robot_greeting(self) -> dict:
+        return self.client.get(
+            "/api/robot/greeting",
+            headers={"Authorization": "Bearer " + self.tokens.pairing_token}).json()
 
     def test_switching_hospitality_off_keeps_what_was_typed(self):
         # L'opérateur coupe l'hospitalité entre deux évènements ; il ne doit pas avoir
@@ -260,29 +276,34 @@ class AdminApiTest(unittest.TestCase):
         self._put_hospitality(active=True)
         self.assertIn("au fond à votre droite", self._built_prompt())
 
-    def test_the_greeting_is_composed_when_saving_not_when_a_visitor_arrives(self):
-        # Sans LLM configuré dans ce test, c'est le repli qui s'applique — l'essentiel
-        # est qu'une phrase existe et cite le lieu.
-        body = self._put_hospitality()
-        self.assertIn("Bienvenue", body["greeting"])
-        self.assertIn("au fond à votre droite", body["greeting"])
+    def test_pepper_prononce_exactement_la_phrase_enregistree(self):
+        # Le serveur ne rédige plus rien à l'enregistrement : il relit ce que l'hôte a
+        # écrit. C'est tout l'intérêt de la zone de texte.
+        fiche = self._put_hospitality(greeting="Bonjour, ici Recepta.")
+        self.assertEqual(fiche["greeting"], "Bonjour, ici Recepta.")
+        self.assertEqual(self._robot_greeting()["speech"], "Bonjour, ici Recepta.")
 
-    def test_the_greeting_is_dropped_when_hospitality_is_off(self):
+    def test_hospitalite_coupee_rend_la_tablette_a_son_accueil_habituel(self):
         self._put_hospitality()
-        self.assertEqual(self._put_hospitality(active=False)["greeting"], "")
+        self.assertTrue(self._robot_greeting()["speech"])
+        # La phrase reste dans la fiche : couper n'efface pas ce qui a été saisi.
+        fiche = self._put_hospitality(active=False)
+        self.assertIn("Bienvenue", fiche["greeting"])
+        self.assertEqual(self._robot_greeting()["speech"], "")
 
-    def test_the_greeting_follows_a_change_of_place(self):
-        # Une accroche périmée enverrait les visiteurs à l'ancien endroit.
-        self._put_hospitality()
-        updated = self._put_hospitality(
-            places=[{"name": "salle Ariane", "directions": "au premier étage"}])
-        self.assertIn("au premier étage", updated["greeting"])
-        self.assertNotIn("au fond à votre droite", updated["greeting"])
+    def test_le_geste_suit_un_changement_de_lieu(self):
+        self._put_hospitality(
+            greeting="Bienvenue ! La salle Ariane vous attend.",
+            places=[{"name": "salle Ariane", "directions": "au premier étage",
+                     "point_direction": "left"}])
+        self.assertEqual(self._robot_greeting()["actions"][0]["name"], "point_left")
 
     def test_a_place_without_directions_is_refused_politely(self):
         # Pas une erreur : la webapp laisse des lignes en cours de saisie.
-        body = self._put_hospitality(places=[{"name": "cuisine", "directions": ""}])
+        self._put_hospitality(places=[{"name": "cuisine", "directions": ""}],
+                              greeting="Bonjour et bienvenue !")
         # « cuisine » reste dans la mission, qui est du texte libre ; c'est la liste des
         # lieux qui ne doit pas apparaître, faute d'orientation à donner.
         self.assertNotIn("Lieux que tu peux indiquer", self._built_prompt())
-        self.assertNotIn("cuisine", body["greeting"])
+        # Et sans orientation, aucun geste n'est proposé.
+        self.assertEqual(self._robot_greeting()["actions"], [])

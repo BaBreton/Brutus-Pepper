@@ -15,6 +15,13 @@ class PreferencesController(private val store: PreferencesStore) {
         onChanged(state)
     }
 
+    fun setReturnHome(enabled: Boolean) {
+        if (state.returnHome == enabled) return
+        state = state.copy(returnHome = enabled)
+        store.save(state)
+        onChanged(state)
+    }
+
     fun setConversationMode(enabled: Boolean) {
         if (state.conversationMode == enabled) return
         state = state.copy(conversationMode = enabled)

@@ -31,8 +31,31 @@ data class BrainInfo(
  * tablette garde ses formules de repli, et un cerveau injoignable ne doit pas priver
  * un visiteur de bonjour.
  */
-data class Greeting(val active: Boolean, val speech: String) {
+data class Greeting(
+    val active: Boolean,
+    val speech: String,
+    /**
+     * Gestes à jouer pendant l'accroche. Aujourd'hui le pointage du lieu que
+     * l'accroche nomme : le cerveau choisit le côté à partir de la fiche, la tablette
+     * ne fait qu'exécuter. Vide quand aucun lieu montrable n'est cité.
+     */
+    val actions: List<AssistantAction> = emptyList()
+) {
     val isUsable: Boolean get() = active && speech.isNotBlank()
+}
+
+/**
+ * L'image que la tablette affiche en boucle entre deux visiteurs.
+ *
+ * Une URL vide est une réponse à part entière : elle veut dire « rends la tablette à
+ * son interface », ce qui arrive dès que l'hospitalité est coupée depuis la webapp.
+ */
+data class IdleImage(val id: String, val url: String, val name: String) {
+    val isUsable: Boolean get() = url.isNotBlank()
+
+    companion object {
+        val NONE = IdleImage("", "", "")
+    }
 }
 
 fun interface BrainTransport {
@@ -155,11 +178,28 @@ class BrainClient(
                     settings.pairingToken, null, null
                 )
                 check(response.status in 200..299) { describe(response) }
-                val root = JsonParser.parseString(response.body).asJsonObject
-                Greeting(
-                    active = root.get("active")?.asBoolean ?: false,
-                    speech = root.get("speech")?.asString.orEmpty().trim()
+                parseGreeting(response.body)
+            })
+        }
+    }
+
+    /**
+     * L'image d'accueil du moment. Redemandée régulièrement : changer l'image, ou
+     * couper l'hospitalité, doit se voir sur la tablette sans redémarrer le robot.
+     *
+     * Passe par le pool média, pas par `worker` : ce sondage périodique ne doit
+     * jamais occuper un fil dont la conversation a besoin.
+     */
+    fun idleImage(onComplete: (Result<IdleImage>) -> Unit) {
+        mediaWorker.execute {
+            onComplete(runCatching {
+                val settings = requireSettings()
+                val response = transport.request(
+                    "GET", "${settings.normalizedUrl()}/api/robot/idle-image",
+                    settings.pairingToken, null, null
                 )
+                check(response.status in 200..299) { describe(response) }
+                parseIdleImage(response.body)
             })
         }
     }
@@ -333,6 +373,35 @@ class BrainClient(
             val text = JsonParser.parseString(body).asJsonObject.get("response")?.asString?.trim()
             check(!text.isNullOrEmpty()) { "Réponse du cerveau vide" }
             return text
+        }
+
+        fun parseGreeting(body: String): Greeting {
+            val root = JsonParser.parseString(body).asJsonObject
+            val actions = root.getAsJsonArray("actions")?.mapNotNull { entry ->
+                when (runCatching { entry.asJsonObject.get("name")?.asString }.getOrNull()) {
+                    "point_left" -> PointLeftAction
+                    "point_right" -> PointRightAction
+                    // Un geste inconnu d'une version plus récente du cerveau est ignoré,
+                    // jamais une cause d'accueil muet.
+                    else -> null
+                }
+            }.orEmpty()
+            return Greeting(
+                active = root.get("active")?.asBoolean ?: false,
+                speech = root.get("speech")?.asString.orEmpty().trim(),
+                actions = actions
+            )
+        }
+
+        fun parseIdleImage(body: String): IdleImage {
+            val root = JsonParser.parseString(body).asJsonObject
+            val url = root.get("url")?.asString.orEmpty().trim()
+            if (url.isEmpty()) return IdleImage.NONE
+            return IdleImage(
+                id = root.get("id")?.asString.orEmpty(),
+                url = url,
+                name = root.get("name")?.asString.orEmpty()
+            )
         }
 
         fun parseHello(body: String): BrainInfo {

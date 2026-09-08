@@ -152,10 +152,15 @@ class ChatSearchTest(unittest.TestCase):
     def test_location_question_includes_configured_pointing_action(self):
         self.settings.update_section("hospitality", {
             "active": True,
-            "places": [{
-                "name": "Cuisine",
-                "directions": "au fond du couloir",
-                "point_direction": "right",
+            "active_profile": "fiche",
+            "profiles": [{
+                "id": "fiche",
+                "label": "Hôte",
+                "places": [{
+                    "name": "Cuisine",
+                    "directions": "au fond du couloir",
+                    "point_direction": "right",
+                }],
             }],
         })
         self.model.replies = ["La cuisine est au fond du couloir."]

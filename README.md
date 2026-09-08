@@ -1,123 +1,124 @@
 # Brutus Pepper
 
-Application Android et serveur open source pour le robot Pepper.
+Robot d'accueil Pepper 1.9 / NAOqi 2.9 en deux morceaux : une application Android
+lancée manuellement sur la tablette, et un **cerveau** dockerisé installé sur le
+réseau du client.
 
-Brutus Pepper relie la tablette du robot Pepper à une antenne Docker. La tablette
-affiche la conversation et les médias ; le serveur gère l’audio, les fournisseurs,
-les recherches web et les réglages. Les clés restent sur l’antenne.
+L'application est additive : elle ne remplace ni le lanceur, ni le mode kiosk, ni le
+démarrage du robot.
 
-## Organisation
+## Expérience conversationnelle 0.11
 
-```text
-Pepper (Android)  <->  réseau local  <->  antenne Docker  <->  fournisseurs choisis
-     voix, écran             API FastAPI       LLM, audio, web et images
+Accueil tablette recentré sur un orbe vocal, état du micro, sous-titres et interruption
+tactile. Administration simplifiée : préparer une visite, médias, intelligence et
+appairage. Recherche d’entreprise sourcée avec validation avant activation.
+
+Le transport audio est progressif et annulable. Whisper local reste disponible ;
+OpenAI GPT Live Transcribe est une option cloud explicite, à valider avec le compte
+client. Voir les [limites et mesures audio](server/brain/README.md#conversation-et-audio-progressif).
+L’essai du micro, de l’écho et des enchaînements QiSDK nécessite le robot connecté.
+
+Pour installer une antenne chez le client : [lanceurs et guide](install/README.md).
+La version illustrée et imprimable est disponible dans le [guide client Pepper](docs/PEPPER_CLIENT_GUIDE.html) ; sa version texte est également fournie en [Markdown](docs/PEPPER_CLIENT_GUIDE.md).
+
+## Architecture
+
+```
+┌──────────────────────────────┐            ┌────────────────────────────────────┐
+│  Pepper — tablette Android   │            │  Cerveau — Docker, LAN du client   │
+│                              │            │                                    │
+│  • wake-word Vosk (local)    │   HTTP     │  Connecteurs LLM                   │
+│  • capture micro + VAD       │◄──────────►│    anthropic · openai · bedrock    │
+│  • TTS et gestes QiSDK       │            │  Connecteurs STT                   │
+│  • rendu de scènes           │            │    whisper embarqué · cloud        │
+│  • manette Bluetooth         │            │  Prompt système unique             │
+│                              │            │  Médiathèque + recherche d'image   │
+│  AUCUNE clé API              │            │  Mode hospitalité                  │
+│  adresse + jeton d'appairage │            │  Webapp d'administration           │
+└──────────────────────────────┘            └────────────────────────────────────┘
 ```
 
-Le dépôt est organisé en deux parties :
+**La tablette ne détient aucune clé fournisseur.** Son jeton d’appairage reste un
+secret à protéger. Elle capte, affiche,
+bouge et parle. Fournisseurs, modèles, clés, médias et contexte d'accueil vivent sur
+le cerveau — donc modifiables sans redéployer d'APK chez le client.
 
-- `app/` : application Android exécutée sur la tablette Pepper ;
-- `server/brain/` : serveur FastAPI, interface d’administration, connecteurs et
-  médiathèque ;
-- `install/` : lanceurs Mac, Windows et Linux et vérifications d’installation ;
-- `docs/` : guide d’installation et notices des composants tiers ;
-- `deploy/fwhisper/` : exemples facultatifs pour une installation Whisper dédiée.
+## Le cerveau
 
-## Démarrer l’antenne
-
-Prérequis : Docker Desktop sur macOS ou Windows, ou Docker Engine avec Compose
-sur Linux.
+Voir [`server/brain/README.md`](server/brain/README.md) pour l'installation.
 
 ```bash
-bash install/pepper.sh setup
+cd server/brain && docker compose up -d
+docker exec pepper-brain cat /data/admin.token    # webapp d'administration
+docker exec pepper-brain cat /data/pairing.token  # à saisir sur la tablette
 ```
 
-Le lanceur construit le serveur localement, crée les volumes persistants et affiche
-les adresses utiles. Ouvrir l’adresse indiquée, saisir le jeton administrateur,
-puis régler les connecteurs dans **Voix et intelligence**. Le serveur est aussi
-lançable directement pour du développement :
+La webapp est servie à la racine du serveur (`http://<serveur>:8770`). On y choisit le
+fournisseur et le modèle, on saisit les clés, on dépose les médias et on renseigne le
+mode hospitalité.
+
+### Mode hospitalité
+
+Un interrupteur. Tant qu'il est levé, Pepper aborde de lui-même chaque personne qui se
+présente avec une phrase d'accueil, puis poursuit la conversation normalement. Baissé,
+il redevient le robot d'accueil ordinaire — sans que l'opérateur ait à effacer ce qu'il
+a saisi, qu'il retrouve intact à la réactivation.
+
+L'opérateur décrit sa consigne en s'adressant à Pepper — « accueille les clients et
+oriente-les vers la cuisine » — et déclare les lieux avec leur orientation : *la
+cuisine, au fond du couloir à votre droite*. L'orientation est reprise mot pour mot, et
+un lieu absent de la liste vaut un « je ne sais pas, demandez à l'accueil » plutôt
+qu'une direction inventée : un robot qui envoie un visiteur au mauvais étage est pire
+qu'un robot qui l'avoue.
+
+La phrase d'accueil est rédigée à l'enregistrement, pas quand quelqu'un entre — un
+appel au fournisseur coûte une à deux secondes, et l'opérateur voit ainsi ce que Pepper
+dira avant qu'un visiteur ne l'entende.
+
+L'hôte peut aussi choisir une image de la médiathèque : Pepper l'affiche en plein écran
+entre deux visiteurs. On la touche pour retrouver l'interface, et elle revient après une
+minute de calme — assez pour traverser les réglages sans être interrompu, assez court
+pour qu'un hall laissé seul retrouve son écran d'accueil.
+
+Cible matérielle : mini-PC x86, Mac ou Raspberry Pi. Image Docker multi-architecture,
+Whisper en CPU int8.
+
+## L'application tablette
 
 ```bash
-docker compose -f server/brain/docker-compose.yml up --build
+./gradlew clean test lintDebug assembleDebug
 ```
 
-Le guide illustré est disponible dans
-[`docs/PEPPER_CLIENT_GUIDE.pdf`](docs/PEPPER_CLIENT_GUIDE.pdf) et sa version
-modifiable dans [`docs/PEPPER_CLIENT_GUIDE.md`](docs/PEPPER_CLIENT_GUIDE.md).
+L'APK est `app/build/outputs/apk/debug/app-debug.apk`. La construction n'installe
+rien : l'installation par ADB et les essais de mouvement restent volontairement des
+étapes séparées, à faire avec de l'espace dégagé autour de Pepper.
 
-## Configurer les fournisseurs
+Au premier lancement, aller sur la page **Cerveau** et saisir l'adresse du serveur et
+le jeton d'appairage. L'application tente immédiatement la connexion et affiche le
+modèle actif.
 
-Les clés se saisissent dans l’interface du serveur et sont chiffrées au repos.
-Elles ne sont pas compilées dans l’APK et ne sont jamais renvoyées en clair par
-l’API d’administration. Après **Enregistrer**, le nouveau réglage est utilisé à
-la prochaine demande : il n’est pas nécessaire de relancer Docker.
+### Ce que fait l'application
 
-### Recherche web et images
+- écran d'accueil avec la conversation, le mode mains libres et le bouton d'annulation ;
+- wake-word « Pepper » hors ligne (Vosk, modèle français embarqué) ;
+- détection de parole calibrée sur le bruit de la pièce, avec hystérésis et fin de
+  phrase adaptative ;
+- manette Bluetooth Xbox, DS4 et DS5 : déplacement au stick gauche, rotation à la
+  croix, actions remappables sur chaque bouton ;
+- gestes QiSDK déclenchables à la voix ou à la manette — tourner sur soi-même,
+  pointer à droite ou à gauche ;
+- affichage sur la tablette à la demande : texte, média de la bibliothèque, image
+  cherchée pour le robot, séquences en boucle, mode kiosk date et heure.
 
-**Google via Serper** est le choix recommandé pour les recherches web, les images
-et la préparation de fiches. Créer un compte sur
-[serper.dev](https://serper.dev/), créer une clé dans le tableau de bord, puis
-la coller dans **Voix et intelligence → Recherche web et images**. La même clé
-sert aux deux usages.
-
-Comme alternative, [Brave Search API](https://brave.com/search/api/) demande un
-compte, une offre activée et une clé créée dans **API Keys**. Wikimedia Commons
-reste disponible sans clé pour les installations qui le souhaitent, mais sa
-couverture d’images est plus limitée.
-
-Sans fournisseur web configuré, Pepper ne prétend pas avoir effectué une recherche
-et indique que les informations en ligne ne sont pas accessibles.
-
-### Modèle de conversation
-
-- [OpenAI](https://platform.openai.com/api-keys) : créer une clé secrète, choisir
-  **OpenAI** et un modèle ;
-- [Anthropic Console](https://console.anthropic.com/settings/keys) : créer une
-  clé API, choisir **Anthropic** et un modèle ;
-- AWS Bedrock : activer l’accès au modèle dans la région choisie et fournir une
-  identité IAM dédiée avec les permissions minimales.
-
-### Transcription
-
-- **Whisper local** : pas de clé ; l’audio reste sur le réseau de l’antenne ;
-- **OpenAI** : utiliser la clé OpenAI et choisir GPT Live Transcribe ou un modèle
-  de transcription ;
-- **AWS Transcribe** : utiliser des credentials IAM et une région, comme expliqué
-  dans le [guide de streaming AWS](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html).
-
-## Construire et tester l’application
+## Vérification
 
 ```bash
-./scripts/download-vosk-model.sh
-./gradlew :app:testDebugUnitTest
-./gradlew :app:assembleDebug
+./gradlew clean test lintDebug assembleDebug          # tablette
+cd server && ./brain/.venv/bin/python -m unittest discover -s brain/tests -t .   # cerveau
 ```
 
-Le modèle de réveil vocal est téléchargé séparément et reste ignoré par Git ; cette
-étape est nécessaire pour fabriquer une APK complète.
+## Documents
 
-L’APK généré se trouve dans `app/build/outputs/apk/debug/`. Pour une installation
-sur Pepper, suivre `install/INSTALLER_APPLICATION.md` et renseigner l’adresse de
-l’antenne dans **Cerveau**.
-
-Tests du serveur et des lanceurs :
-
-```bash
-PYTHONPATH=server python3 -m unittest discover -s server/brain/tests -t server/brain
-python3 -m unittest discover -s install/tests -v
-```
-
-## Sécurité et données
-
-Ne jamais committer `.env`, `*.token`, `settings.key`, `settings.enc`, une clé
-API ou un fichier de credentials cloud. Le port de l’antenne doit rester sur un
-réseau privé de confiance ; ne pas le publier directement sur Internet.
-
-Les volumes Docker contiennent les réglages, les jetons, la médiathèque et les
-modèles Whisper. Ils doivent être sauvegardés séparément du code et protégés avec
-les mêmes précautions que les clés API.
-
-## Licence
-
-Le code original de ce dépôt est distribué sous licence MIT. Les dépendances,
-modèles et ressources Pepper/SoftBank restent soumis à leurs propres licences ;
-voir [`docs/third-party/`](docs/third-party/).
+- [Architecture cible](docs/superpowers/specs/2026-07-27-pepper-brain-architecture.md)
+- [Audit du 2026-07-27](2026-05-02-pepper-audit-readonly.md)
+- [Rapport temps et consommation des assistants](docs/PEPPER_USAGE_REPORT.md)

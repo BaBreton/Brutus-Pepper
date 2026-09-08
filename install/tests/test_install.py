@@ -57,9 +57,9 @@ class LauncherTests(unittest.TestCase):
 
     def test_repeat_start_same_project_and_no_secrets(self):
         for _ in range(2):
-            result = self.run_launcher("start", "--lan-ip", "198.51.100.12", "--wait", "1")
+            result = self.run_launcher("start", "--lan-ip", "192.0.2.12", "--wait", "1")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("http://198.51.100.12:8770", result.stdout)
+            self.assertIn("http://192.0.2.12:8770", result.stdout)
             self.assertNotIn("SECRET-SENTINEL", result.stdout + result.stderr)
         calls = self.calls()
         self.assertEqual(calls.count("up -d --no-build --pull never brain"), 2)

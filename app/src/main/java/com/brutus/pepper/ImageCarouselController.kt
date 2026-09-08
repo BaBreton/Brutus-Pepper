@@ -35,6 +35,10 @@ class ImageCarouselController(
         if (active == null) startNextLocked()?.let(::resolveNext)
     }
 
+    /** Vrai tant qu'une image demandée pendant l'échange occupe ou attend l'écran. */
+    @Synchronized
+    fun isActive(): Boolean = active != null || queue.isNotEmpty()
+
     /** Retire l'image visible et ignore les résolutions encore en vol. */
     fun cancel() {
         synchronized(this) {

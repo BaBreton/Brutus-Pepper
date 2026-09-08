@@ -15,8 +15,8 @@ android {
         applicationId = "com.brutus.pepper"
         minSdk = 23
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.11.1"
+        versionCode = 31
+        versionName = "0.16.0"
 
         ndk {
             abiFilters += "armeabi-v7a"

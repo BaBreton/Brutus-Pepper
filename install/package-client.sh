@@ -55,7 +55,7 @@ done < "$STAGE/tracked"
 for required in Dockerfile docker-compose.yml requirements.txt main.py __init__.py static/index.html; do
     [[ -f $STAGE/bundle/server/brain/$required ]] || fail "Source suivie manquante : server/brain/$required"
 done
-for relative in install/README.md install/compose.env install/network.sh install/pepper.sh install/Pepper.command install/Pepper.ps1 install/Pepper.cmd; do
+for relative in install/README.md install/compose.env install/network.sh install/pepper.sh install/Pepper.command install/Pepper.ps1 install/Pepper.cmd install/Install-Windows.ps1 install/Installer-Pepper.cmd; do
     add_file "$relative"
 done
 if [[ -f "$ROOT/docs/PEPPER_CLIENT_GUIDE.md" ]]; then

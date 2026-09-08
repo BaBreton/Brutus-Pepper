@@ -74,8 +74,24 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
     private lateinit var sceneController: SceneController
     private lateinit var imageCarousel: ImageCarouselController
 
+    // ── Écran d'accueil en mode hospitalité ─────────────────────────────────
+    // L'image que le cerveau désigne occupe la tablette entre deux visiteurs. Un
+    // battement régulier la pose, la retire et redemande au cerveau laquelle montrer,
+    // pour qu'un changement fait depuis la webapp se voie sans redémarrer le robot.
+    private val idleImages = IdleImageController()
+    private val idleHandler = Handler(Looper.getMainLooper())
+    private var lastIdlePollMs = 0L
+    private val idleTick = object : Runnable {
+        override fun run() {
+            refreshIdleImage()
+            idleHandler.postDelayed(this, IDLE_TICK_MS)
+        }
+    }
+
     // ── §3 — Auto-engage ────────────────────────────────────────────────────
     private var engagementListener: HumanEngagementListener? = null
+    // Retient l'orientation vers laquelle Pepper se remet entre deux visiteurs.
+    private var homePosition: HomePositionController? = null
     // True once Pepper has auto-engaged in the current conversation; blocks re-engaging until
     // the conversation ends (reset on conversation end / manual reset).
     private var engagedThisConversation = false
@@ -148,7 +164,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
                 android.util.Log.w("BrutusScene", "image « ${action.query} » introuvable", error)
             },
         )
-        findViewById<View>(R.id.presentationOverlay).setOnClickListener { imageCarousel.cancel() }
+        findViewById<View>(R.id.presentationOverlay).setOnClickListener { dismissOverlay() }
 
         hubController = HubController(SharedPreferencesBindingStore(this))
         whisperController = WhisperBenchmarkController()
@@ -193,6 +209,11 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         refreshGamepads()
         applyConversationMode(preferencesController.state.conversationMode)
         updateInterruptButton(currentConvState)
+        // Revenir au premier plan est un geste : on laisse le délai courir avant de
+        // reposer l'image, sinon elle recouvrirait l'écran qu'on vient d'ouvrir.
+        idleImages.noteActivity(SystemClock.elapsedRealtime())
+        idleHandler.removeCallbacks(idleTick)
+        idleHandler.postDelayed(idleTick, IDLE_TICK_MS)
         if (pendingTalk && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             pendingTalk = false
             startConversation()
@@ -201,6 +222,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
 
     override fun onPause() {
         foreground = false
+        idleHandler.removeCallbacks(idleTick)
         haltVoice()
         inputManager.unregisterInputDeviceListener(this)
         driveState.reset()
@@ -213,6 +235,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
     }
 
     override fun onDestroy() {
+        idleHandler.removeCallbacks(idleTick)
         if (::streaming.isInitialized) streaming.close()
         recorder.stop()
         recognizer?.close()
@@ -236,6 +259,9 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         val newDrive = PepperDriveController(qiContext)
         speechGateway = speech
         drive = newDrive
+        // L'installateur pose le robot face à l'entrée : c'est la référence par
+        // défaut, et elle est remplaçable depuis Réglages une fois le robot déplacé.
+        homePosition = HomePositionController(qiContext).also { it.remember() }
 
         // §3 — Create engagement listener first.
         var coordinator: RobotActionCoordinator? = null
@@ -293,10 +319,10 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
                         }
                         runOnUiThread { if (foreground && preferencesController.state.conversationMode &&
                             greetingGen == responseGen && conversationController?.awaitingExplicitWake != true &&
-                            conversationController?.isBusy() != true) speakGreeting(
-                            if (hospitality?.isUsable == true) hospitality.speech
-                            else DEFAULT_GREETINGS.random()
-                        ) }
+                            conversationController?.isBusy() != true) {
+                            if (hospitality?.isUsable == true) speakGreeting(hospitality.speech, hospitality.actions)
+                            else speakGreeting(DEFAULT_GREETINGS.random())
+                        } }
                     }
                 }
             },
@@ -328,6 +354,8 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
             driveState.reset()
             actionCoordinator?.onRobotFocusLost()
             drive?.close()
+            homePosition?.cancel()
+            homePosition = null
             actionCoordinator = null
             drive = null
             speechGateway = null
@@ -513,7 +541,8 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
     }
 
     private fun navigate(screen: HubScreen) {
-        imageCarousel.cancel()
+        // Aller dans un écran est un geste : l'accueil ne doit pas revenir par-dessus.
+        dismissOverlay()
         hubController.navigateTo(screen)
         renderHub()
         if (screen == HubScreen.HOME) ensureWhisperReady()
@@ -749,7 +778,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         }
         findViewById<View>(R.id.resetButton).setOnClickListener { resetConversation() }
         findViewById<View>(R.id.sceneTalk).setOnClickListener { findViewById<View>(R.id.stopButton).performClick() }
-        findViewById<View>(R.id.sceneReturn).setOnClickListener { imageCarousel.cancel() }
+        findViewById<View>(R.id.sceneReturn).setOnClickListener { dismissOverlay() }
         findViewById<Switch>(R.id.sceneMicroSwitch).setOnCheckedChangeListener { _, checked ->
             preferencesController.setConversationMode(checked)
         }
@@ -796,7 +825,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         wakeWordEngine?.stop()
         brain.cancelPending()
         speechGateway?.cancel()
-        imageCarousel.cancel()
+        clearOverlay()
         currentConvState = ConversationController.State.IDLE_WAKE
         orb.setAudioLevel(0)
         findViewById<View>(R.id.liveTranscript).visibility = View.GONE
@@ -811,7 +840,7 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         streamCapture = null
         brain.cancelPending()
         speechGateway?.cancel()
-        imageCarousel.cancel()
+        clearOverlay()
         conversationController?.cancelTurn()
         currentConvState = ConversationController.State.IDLE_WAKE
         findViewById<View>(R.id.liveTranscript).visibility = View.GONE
@@ -955,6 +984,35 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         switchConversation.setOnCheckedChangeListener { _, isChecked ->
             preferencesController.setConversationMode(isChecked)
         }
+        findViewById<Switch>(R.id.returnHomeSwitch).setOnCheckedChangeListener { _, isChecked ->
+            preferencesController.setReturnHome(isChecked)
+        }
+        findViewById<View>(R.id.setHomeButton).setOnClickListener { rememberHomePosition() }
+        renderHomeStatus()
+    }
+
+    /** « Là où il est maintenant, c'est sa place. » */
+    private fun rememberHomePosition() {
+        val controller = homePosition
+        val status = findViewById<TextView>(R.id.homeStatus)
+        if (controller == null) {
+            status.text = "En attente de Pepper : réessayez quand le robot est prêt."
+            status.setTextColor(getColor(R.color.ink_2))
+            return
+        }
+        if (controller.remember()) {
+            status.text = "Position de départ enregistrée. Pepper y reviendra entre deux visiteurs."
+            status.setTextColor(getColor(R.color.ok))
+        } else {
+            status.text = "Position non enregistrée. Vérifiez que Pepper est bien connecté."
+            status.setTextColor(getColor(R.color.danger))
+        }
+    }
+
+    private fun renderHomeStatus() = runOnUiThread {
+        val switch = findViewById<Switch>(R.id.returnHomeSwitch)
+        val wanted = preferencesController.state.returnHome
+        if (switch.isChecked != wanted) switch.isChecked = wanted
     }
 
     private fun renderPreferences() {
@@ -963,6 +1021,8 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         val switchConversation = findViewById<Switch>(R.id.conversationSwitch)
         if (checkAutoEngage.isChecked != state.autoEngage) checkAutoEngage.isChecked = state.autoEngage
         if (switchConversation.isChecked != state.conversationMode) switchConversation.isChecked = state.conversationMode
+        val switchHome = findViewById<Switch>(R.id.returnHomeSwitch)
+        if (switchHome.isChecked != state.returnHome) switchHome.isChecked = state.returnHome
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -1104,6 +1164,15 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
                     onStateChanged = { st ->
                         runOnUiThread {
                             currentConvState = st
+                            // Chaque changement d'état est un signe de vie : il relance le
+                            // délai, y compris le retour au repos qui clôt une conversation.
+                            idleImages.noteActivity(SystemClock.elapsedRealtime())
+                            // Retirée tout de suite, sans attendre le battement : personne ne
+                            // doit parler à Pepper devant son écran d'accueil.
+                            if (st != ConversationController.State.IDLE_WAKE) {
+                                hideIdleImage()
+                                homePosition?.cancel()
+                            }
                             if (st != ConversationController.State.IDLE_WAKE) {
                                 conversationActiveUntilMs = SystemClock.elapsedRealtime() + CONVERSATION_GRACE_MS
                             }
@@ -1375,6 +1444,105 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         }
     }
 
+    // ────────────────────────────────────────────────────────────────────────
+    // Écran d'accueil
+    // ────────────────────────────────────────────────────────────────────────
+
+    /** Vide l'écran de scène — image d'accueil comprise — sans relancer le délai. */
+    private fun clearOverlay() {
+        imageCarousel.cancel()   // son `clear` rend déjà l'écran à l'interface
+        idleImages.markVisible(false)
+    }
+
+    /**
+     * Retire la seule image d'accueil. Distinct de [clearOverlay] : pendant un
+     * échange, une image demandée par Pepper occupe légitimement le même écran et ne
+     * doit pas partir avec elle.
+     */
+    private fun hideIdleImage() {
+        if (!idleImages.visible) return
+        idleImages.markVisible(false)
+        sceneController.cancel()
+    }
+
+    /** L'écran vient d'être touché : on le rend, et l'accueil attend son délai. */
+    private fun dismissOverlay() {
+        clearOverlay()
+        idleImages.dismiss(SystemClock.elapsedRealtime())
+    }
+
+    /**
+     * Un battement : demande au cerveau quelle image montrer, puis pose ou retire
+     * celle du moment. Tout passe par ici plutôt que par des réveils dispersés — un
+     * seul endroit décide de ce qu'il y a à l'écran quand personne ne parle.
+     */
+    private fun refreshIdleImage() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastIdlePollMs >= IDLE_POLL_MS && brainSettingsStore.load().isComplete) {
+            lastIdlePollMs = now
+            brain.idleImage { result ->
+                // Cerveau injoignable : on garde la dernière image connue. Rendre
+                // brusquement la tablette à son interface devant un hall serait pire
+                // que d'afficher une image d'hier une minute de trop.
+                val image = result.getOrElse {
+                    android.util.Log.d("BrutusIdle", "image d'accueil indisponible", it)
+                    return@idleImage
+                }
+                runOnUiThread {
+                    if (idleImages.setImage(image) && idleImages.visible) {
+                        // L'image a changé sous nos yeux : on retire l'ancienne, le
+                        // battement suivant posera la nouvelle.
+                        hideIdleImage()
+                    }
+                }
+            }
+        }
+
+        val conversationIdle = currentConvState == ConversationController.State.IDLE_WAKE &&
+            conversationController?.isBusy() != true
+        if (idleImages.consumeReadyForNextVisitor(now, conversationIdle)) readyForNextVisitor()
+        val wanted = idleImages.shouldShow(now, conversationIdle, imageCarousel.isActive())
+        if (wanted && !idleImages.visible) {
+            idleImages.markVisible(true)
+            sceneRenderer.showIdleImage(idleImages.image.url) { shown ->
+                idleImages.markVisible(shown)
+                // Téléchargement raté : on repousse d'un délai complet plutôt que de
+                // réessayer toutes les cinq secondes derrière un cerveau éteint.
+                if (!shown) idleImages.noteActivity(SystemClock.elapsedRealtime())
+            }
+        } else if (!wanted && idleImages.visible) {
+            clearOverlay()
+        }
+    }
+
+    /**
+     * Le hall est resté calme : on clôt l'échange précédent et on redevient
+     * disponible. Sans cela, Pepper reste bloqué sur quelqu'un qui est déjà parti —
+     * l'accueil spontané ne repart pas, et un « au revoir » gardait le mot d'éveil
+     * obligatoire pour le visiteur suivant.
+     *
+     * On ne coupe pas la voix : le micro doit rester armé pour la personne d'après.
+     */
+    private fun readyForNextVisitor() {
+        conversationHistory.reset()
+        engagedThisConversation = false
+        conversationActiveUntilMs = 0L
+        voiceError = null
+        conversationController?.releaseExplicitWake()
+        clearChatUi()
+        // Le socle a suivi les visiteurs du regard : sans ce retour, la personne
+        // suivante arriverait dans le dos de Pepper.
+        if (preferencesController.state.returnHome) homePosition?.returnHome()
+        android.util.Log.i("BrutusIdle", "hall calme : prêt pour un nouveau visiteur")
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            idleImages.noteActivity(SystemClock.elapsedRealtime())
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
     private fun runAssistantAction(action: AssistantAction) {
         android.util.Log.d("BrutusScene", "runAssistantAction: $action")
         when (action) {
@@ -1383,23 +1551,38 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
             is TurnAroundAction -> actionCoordinator?.run(BoundAction.TURN_AROUND)
             is DisplayImageAction -> showSearchedImage(action)
             else -> {
-                imageCarousel.cancel()
+                clearOverlay()
                 sceneController.run(action)
             }
         }
     }
 
-    /** Prononce l'accroche d'accueil et ouvre le micro dans la foulée. */
-    private fun speakGreeting(greeting: String) = runOnUiThread {
+    /**
+     * Prononce l'accroche d'accueil et ouvre le micro dans la foulée.
+     *
+     * [actions] porte le geste choisi par le cerveau quand l'accroche nomme un lieu
+     * qu'on sait montrer. Il part en même temps que la parole, pas après : montrer la
+     * porte une fois la phrase finie n'aurait plus de sens pour le visiteur.
+     */
+    private fun speakGreeting(greeting: String, actions: List<AssistantAction> = emptyList()) = runOnUiThread {
         if (!foreground || !preferencesController.state.conversationMode ||
             conversationController?.awaitingExplicitWake == true ||
             conversationController?.isBusy() == true) return@runOnUiThread
         val gen = responseGen
+        idleImages.noteActivity(SystemClock.elapsedRealtime())
+        hideIdleImage()
         addPepperBubble(greeting)
         // Suspend the wake-word while Pepper speaks the greeting so it doesn't
         // hear itself (no self-trigger). Open the mic only once the greeting ends.
         conversationController?.suspendForPtt()
         updateInterruptButton(ConversationController.State.SPEAKING)
+        actions.forEach { action ->
+            when (action) {
+                PointRightAction -> actionCoordinator?.run(BoundAction.POINT_RIGHT)
+                PointLeftAction -> actionCoordinator?.run(BoundAction.POINT_LEFT)
+                else -> { /* l'accroche ne porte que des pointages */ }
+            }
+        }
         speechGateway?.speak(greeting) { speakResult ->
             if (gen != responseGen || !foreground || !preferencesController.state.conversationMode) return@speak
             if (speakResult.isSuccess) {
@@ -1475,5 +1658,10 @@ class MainActivity : RobotActivity(), RobotLifecycleCallbacks, InputManager.Inpu
         private const val CONVERSATION_FOLLOWUP_TIMEOUT_MS = 10_000L
         /** Grace window after conversation activity during which auto-engage stays blocked. */
         private const val CONVERSATION_GRACE_MS = 20_000L
+
+        /** Cadence du battement de l'écran d'accueil : assez fin pour ne pas se voir. */
+        private const val IDLE_TICK_MS = 5_000L
+        /** Intervalle entre deux demandes de l'image d'accueil au cerveau. */
+        private const val IDLE_POLL_MS = 60_000L
     }
 }

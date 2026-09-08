@@ -71,19 +71,72 @@ Mesure indicative sur une machine quatre cœurs : phrase synthétique française
 de latence. Le délai de silence, le réseau, le LLM et le démarrage TTS s’ajoutent.
 Mesurer notamment `PepperLatency finalisation_ms` dans logcat lors des essais robot.
 
-## Préparer une visite
+## Fiches d’accueil
 
-Dans « Préparer une visite », saisir l’entreprise invitée, éventuellement son domaine,
-puis rechercher ou écrire une fiche. Serper ou Brave fournit les sources ; une synthèse utilise
-le LLM configuré. Rien n’est activé par la recherche : relire la fiche, cocher la
-validation et enregistrer. Votre entreprise hôte, les lieux et les consignes sont
-séparés de l’entreprise invitée. L’accueil initial ne suppose pas l’identité d’une
-personne détectée et ne récite pas les notes privées. Le contexte guide ensuite
-la discussion. Couper l’accueil conserve la fiche.
+Une fiche par entreprise ou par lieu reçu. Elle porte le nom du lieu, le rôle de
+Pepper, les consignes, les lieux à indiquer, l’image affichée sur la tablette et la
+phrase d’accueil. On bascule de l’une à l’autre dans « Fiche en cours » ; **Nouvelle
+fiche**, **Dupliquer** et **Supprimer** gèrent la liste. Une seule sert à la fois,
+celle qui est sélectionnée à l’enregistrement.
+
+**Il n’y a pas d’état brouillon.** Ce qui est enregistré est ce que Pepper utilise ;
+le bouton « Enregistrer l’accueil » est la seule validation.
+
+### La phrase d’accueil
+
+Pepper prononce **exactement** ce qui est écrit dans la zone de texte, mot pour mot.
+Le serveur ne rédige plus rien au moment où un visiteur arrive : il relit.
+
+Deux boutons écrivent dans cette zone, et rien d’autre :
+
+- **Proposer une phrase** rédige une accroche à partir de la fiche ;
+- **Proposer des variantes** en propose plusieurs autour de ce qui est déjà écrit,
+  pour choisir plutôt que subir. Les propositions s’affichent sous la zone ; un clic
+  place la phrase choisie dans la zone de texte.
+
+Sans modèle configuré ou joignable, une phrase composée sans lui est proposée, et la
+webapp le dit. Rien n’est jamais prononcé que l’hôte n’ait lu à l’écran.
+
+« Le geste qui accompagne l’accueil » force un côté de pointage. Laissé sur
+« Automatique », Pepper pointe si l’accroche nomme un lieu auquel un côté est
+associé — le nom le plus long l’emporte, « la salle du conseil » n’est pas réduit
+à « la salle ».
+
+### Préparer une visite précise
+
+Dans le volet dépliant du même écran : l’entreprise invitée, éventuellement son
+domaine, puis une recherche ou une fiche écrite à la main. Serper ou Brave fournit
+les sources ; une synthèse utilise le LLM configuré. L’accueil initial ne suppose pas
+l’identité d’une personne détectée et ne récite pas les notes privées.
 
 Pour une réception où les visuels doivent être maîtrisés, privilégier la médiathèque
 préparée par l’hôte. Brave utilise SafeSearch strict ; cela ne garantit pas tous les
 résultats. Les licences des images trouvées sur Internet restent applicables.
+
+### Rester face à l’entrée
+
+Le socle de Pepper tourne en suivant les visiteurs du regard : au bout de quelques
+échanges il ne fait plus face à la porte, et la personne suivante arrive dans son dos.
+
+Sur la tablette, dans **Réglages** → « Rester face à l’entrée » : l’interrupteur
+**Revenir face à l’entrée entre deux visiteurs** est actif par défaut, et le bouton
+**Définir la position actuelle comme position de départ** enregistre l’orientation où
+le robot se trouve. Elle est retenue automatiquement à la connexion du robot ; il faut
+la redéfinir après l’avoir déplacé.
+
+Le retour a lieu au moment où l’image d’accueil revient, c’est-à-dire après trente
+secondes de calme, et par le chemin le plus court. Un écart de moins de cinq degrés
+ne déclenche rien : un hall vide ne doit pas faire frémir le socle en boucle. Un
+visiteur qui se présente pendant la rotation l’interrompt.
+
+### L’image de la tablette
+
+Choisir une image de la médiathèque : Pepper la montre **en plein écran, sans marge
+ni bande**, tant que personne ne lui parle. Un appui la retire ; elle revient après
+trente secondes sans conversation ni geste sur l’écran — et au même moment l’échange
+précédent est clos, pour que le robot soit disponible pour quelqu’un d’autre. Seule
+une image convient : une boucle vidéo tiendrait le processeur de la tablette éveillé
+des heures devant un hall vide.
 
 ## Vérification
 
@@ -127,13 +180,13 @@ masque les secrets déjà enregistrés et affiche le tarif du modèle choisi. La
 la clé déjà enregistrée ; rien n'est envoyé tant qu'on n'a pas appuyé sur
 « Enregistrer ».
 
-Les montants ci-dessous sont des repères en dollars US, vérifiés le 6 septembre 2026,
+Les montants ci-dessous sont des repères en dollars US, vérifiés le 7 septembre 2026,
 et non un devis :
 
 | Usage | Option | Tarif indicatif |
 |---|---|---:|
-| LLM | GPT-4.1 mini | $0,40 / 1 M tokens entrée · $1,60 / 1 M sortie |
-| LLM | GPT-4.1 | $2 / 1 M entrée · $8 / 1 M sortie |
+| LLM | GPT-5.6 Luna | $0,20 / 1 M tokens entrée · $1,20 / 1 M sortie |
+| LLM | GPT-5.6 Terra | $2 / 1 M entrée · $12 / 1 M sortie |
 | LLM | Claude Haiku 4.5 | $1 / 1 M entrée · $5 / 1 M sortie |
 | LLM | Claude Sonnet 5 | $2 / 1 M entrée · $10 / 1 M sortie |
 | LLM | Claude Opus 5 | $5 / 1 M entrée · $25 / 1 M sortie |
@@ -148,11 +201,23 @@ et non un devis :
 | Recherche | Google via Serper | $1 / 1 000 recherches ; pack $50 / 50 000 crédits, valables 6 mois ; essai initial 2 500 recherches |
 | Recherche | Brave Search | $5 / 1 000 recherches ; $5 de crédits mensuels offerts selon l'offre Search |
 
+Côté conversation, **GPT-5.6 Luna est le choix par défaut** : devant un visiteur, la
+latence pèse plus que la finesse de la réponse, et il coûte moins que l'ancien GPT-4.1
+mini sur l'entrée comme sur la sortie. GPT-5.6 Terra reste disponible quand l'accueil
+demande des réponses plus étoffées. GPT-4.1 n'est plus au catalogue mais reste
+appelable : une installation qui l'a enregistré continue de fonctionner tant qu'on ne
+change pas son modèle.
+
+Le nom du plafond de jetons a changé avec la génération GPT-5 : le connecteur envoie
+`max_completion_tokens` aux modèles récents et `max_tokens` aux GPT-4.x, et rejoue une
+fois avec l'autre orthographe si le fournisseur la réclame — de quoi encaisser un
+identifiant de modèle que ce code ne connaît pas encore.
+
 Pour une discussion naturelle avec transcription visible pendant la parole, choisir
 GPT Live Transcribe et renseigner la clé OpenAI. Pour garder l'audio dans le réseau
 du client, choisir Whisper local : `base` est le réglage par défaut et rapide, `small`
 le réglage plus précis, et `medium` est réservé à une machine puissante. Les tarifs des modèles
-LLM sont ceux des pages officielles [OpenAI](https://developers.openai.com/api/docs/models/gpt-4.1-mini),
+LLM sont ceux des pages officielles [OpenAI](https://developers.openai.com/api/docs/models/gpt-5.6-luna),
 [Anthropic](https://platform.claude.com/docs/en/about-claude/pricing) et
 [AWS Transcribe](https://aws.amazon.com/transcribe/pricing/). Les tarifs peuvent
 évoluer ; la webapp donne toujours le lien source correspondant à la carte affichée.

@@ -18,3 +18,19 @@ app/src/main/assets/model-fr/
 .env
 *.log
 tmp/
+
+# Poste de développement
+.DS_Store
+.cxx/
+.idea/
+local.properties
+*.iml
+.venv-tests/
+
+# Notes internes et livraisons : ne doivent jamais partir dans ce dépôt public.
+chat.md
+Livraison-client/
+docs/PEPPER_USAGE_REPORT.md
+.agent-context/
+docs/agent/
+docs/superpowers/

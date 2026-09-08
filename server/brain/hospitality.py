@@ -24,14 +24,22 @@ def _normalise_spoken(value: str) -> str:
     return re.sub(r"[^\w]+", " ", value, flags=re.UNICODE).strip()
 
 
-def _place_for_location(text: str, places: list[dict]) -> dict | None:
+def place_named_in(text: str, places: list[dict] | None) -> dict | None:
+    """Le lieu, parmi ceux qu'on sait montrer, dont le nom est prononcé dans `text`.
+
+    Distinct de la reconnaissance d'une question : ici on ne cherche pas à savoir si
+    quelqu'un demande son chemin, seulement si la phrase nomme un lieu associé à un
+    côté de pointage. C'est ce qui permet à l'accroche d'accueil — rédigée ou imposée
+    par l'opérateur — de s'accompagner du bon geste.
+
+    Les noms composés sont testés d'abord : « salle du conseil » ne doit pas être
+    réduit à un lieu plus court qui apparaîtrait dans la même phrase.
+    """
     spoken = _normalise_spoken(text)
-    if not spoken or not _LOCATION_WORDS.search(spoken):
+    if not spoken:
         return None
-    # Les noms composés sont testés d'abord : « salle du conseil » ne doit pas être
-    # réduit à un lieu plus court qui apparaîtrait dans la même phrase.
     candidates = []
-    for place in places:
+    for place in places or []:
         if not isinstance(place, dict):
             continue
         name = _normalise_spoken(place.get("name", ""))
@@ -40,6 +48,14 @@ def _place_for_location(text: str, places: list[dict]) -> dict | None:
             if re.search(r"(?:^| )%s(?:$| )" % re.escape(name), spoken):
                 candidates.append((len(name), place))
     return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
+def _place_for_location(text: str, places: list[dict]) -> dict | None:
+    # Une question ordinaire qui cite un lieu ne déclenche rien : il faut aussi que la
+    # phrase demande un chemin.
+    if not _LOCATION_WORDS.search(_normalise_spoken(text)):
+        return None
+    return place_named_in(text, places)
 
 
 def _json_candidate(response: str) -> tuple[dict, bool]:
@@ -79,6 +95,62 @@ def add_pointing_action(response: str, user_text: str, places: list[dict],
                            and item.get("name") in ("point_left", "point_right"))]
         payload["actions"] = [action] + actions
     return json.dumps(payload, ensure_ascii=False)
+
+
+# Champs qu'une installation d'avant les fiches range à plat dans « hospitality ».
+LEGACY_FIELDS = ("company", "mission", "visitors", "notes", "places", "idle_media",
+                 "greeting", "greeting_point", "active_visit")
+
+
+def normalise(card: dict) -> dict:
+    """Ramène les réglages d'hospitalité à la forme « fiches nommées ».
+
+    Une installation antérieure range une seule fiche à plat ; on la convertit en
+    première fiche plutôt que de la perdre, et sans jamais y toucher deux fois — dès
+    qu'une liste existe, elle fait autorité.
+    """
+    profiles = [dict(p) for p in (card.get("profiles") or []) if isinstance(p, dict)]
+    if not profiles and any(card.get(field) for field in LEGACY_FIELDS):
+        legacy = {field: card.get(field) for field in LEGACY_FIELDS}
+        legacy["id"] = "reprise"
+        legacy["label"] = str(card.get("company") or "").strip() or "Fiche reprise"
+        legacy["greeting_pool"] = []
+        profiles = [legacy]
+    active_profile = str(card.get("active_profile", "")).strip()
+    known = {str(p.get("id", "")) for p in profiles}
+    if active_profile not in known:
+        active_profile = str(profiles[0].get("id", "")) if profiles else ""
+    return {"active": bool(card.get("active")),
+            "active_profile": active_profile,
+            "profiles": profiles}
+
+
+def active_card(card: dict) -> dict:
+    """La fiche en service, à plat, sous la forme qu'attendent le prompt et l'accroche.
+
+    Le reste du serveur n'a pas à connaître l'organisation en fiches : il ne voit que
+    celle du moment, avec l'interrupteur global recopié dedans.
+    """
+    normalised = normalise(card)
+    chosen = next((p for p in normalised["profiles"]
+                   if str(p.get("id", "")) == normalised["active_profile"]), None)
+    flat = dict(chosen or {})
+    flat["active"] = normalised["active"]
+    return flat
+
+
+def idle_image(catalog: list[dict], media_id: str) -> dict | None:
+    """L'image d'accueil désignée, ou None si elle n'est plus affichable.
+
+    Une vidéo ne convient pas : l'écran d'accueil reste posé pendant des heures
+    devant un hall, et une boucle vidéo tiendrait le processeur de la tablette
+    éveillé pour rien. Seule une image est acceptée.
+    """
+    identifier = str(media_id or "").strip()
+    if not identifier:
+        return None
+    item = next((entry for entry in catalog if entry.get("id") == identifier), None)
+    return item if item and item.get("kind") == "image" else None
 
 
 def official_domain(value: str) -> str:
@@ -131,7 +203,6 @@ class VisitProfile(BaseModel):
     objective: str = Field(default='', max_length=1000)
     brief: str = Field(default='', max_length=6000)
     sources: list[str] = Field(default_factory=list, max_length=8)
-    validated: bool = False
 
     _domain = field_validator('domain')(official_domain)
 
@@ -211,4 +282,4 @@ def research(body: ResearchRequest, settings: dict) -> dict:
             warnings.append('Synthèse indisponible : les extraits sourcés restent disponibles.')
     return {'company': body.company, 'domain': body.domain, 'draft': draft[:6000],
             'sources': sources, 'unknowns': unknowns, 'warnings': warnings,
-            'validated': False, 'generated': generated}
+            'generated': generated}

@@ -31,6 +31,11 @@ details{border-top:1px solid var(--line);margin-top:28px;padding-top:22px}summar
 .creds{background:#f5f8f4;border-radius:13px;padding:18px;margin-top:20px}.creds h3{margin:0}.creds .badge{margin-left:12px}
 .token,code{font-family:ui-monospace,monospace;overflow-wrap:anywhere;background:var(--soft);border-radius:9px;padding:12px}.token{user-select:all}code{padding:2px 5px;font-size:11px}
 .place{display:flex;gap:10px;margin-top:10px;align-items:center}.place input{flex:1;min-width:0}.place select{flex:0 0 170px;width:170px}.danger{width:auto;background:#fbecea;color:#a42a2a;margin:0;font-size:12px}
+.profile-bar{display:flex;gap:24px;align-items:flex-end}.profile-bar>div{flex:1;min-width:0}
+.pool{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.pool button{width:100%;margin:0;text-align:left;background:#f7faf7;color:var(--ink);border:1px solid var(--line);font-weight:400;line-height:1.45;padding:12px 14px}
+.pool button:hover{background:var(--soft)}
+.idle-preview{margin-top:14px}.idle-preview img{max-width:260px;max-height:170px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
 .media{display:flex;gap:18px;align-items:center;padding:15px;border:1px solid var(--line);border-radius:14px;margin-top:15px}.media img,.media video{width:100px;height:70px;object-fit:cover;border-radius:9px}.media div{flex:1;min-width:0}.media strong,.media small{display:block;overflow-wrap:anywhere}.media small{color:var(--muted)}
 footer{color:var(--muted);font-size:11px;margin:32px 0}.locked main{max-width:850px;padding-top:100px}.locked #loginCard{padding:45px}
 @media(max-width:900px){aside{width:205px;padding:28px 12px}main{margin-left:205px;padding:36px 24px}.row{gap:16px}.actions{flex-wrap:wrap}}
